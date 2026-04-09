@@ -68,8 +68,8 @@ export default function UnitEconomicsPage() {
   const [overheadPct,      setOverheadPct]      = useState(10)
 
   // --- Retail prices ---
-  const [retailLarge,      setRetailLarge]      = useState(19.99)
-  const [retailSmall,      setRetailSmall]      = useState(3.49)
+  const [retailLarge,      setRetailLarge]      = useState(39.99)
+  const [retailSmall,      setRetailSmall]      = useState(5.49)
 
   // --- Tabs ---
   const [activeTab,        setActiveTab]        = useState<'overview' | 'process' | 'margins'>('overview')
@@ -108,9 +108,14 @@ export default function UnitEconomicsPage() {
   const marginLarge    = retailLarge > 0 ? ((retailLarge - cogsLarge)  / retailLarge * 100) : 0
   const marginSmall    = retailSmall > 0 ? ((retailSmall - cogsSmall)  / retailSmall * 100) : 0
 
-  // Margin table price points
-  const largePrices = [9.99, 14.99, 19.99, 24.99, 29.99]
-  const smallPrices = [1.99, 2.49, 2.99, 3.49, 3.99]
+  // Margin table price points (anchored around 80% GM minimum)
+  const largePrices = [24.99, 29.99, 34.99, 39.99, 44.99]
+  const smallPrices = [3.99, 4.49, 4.99, 5.49, 5.99]
+
+  // Min price for target gross margin
+  const TARGET_GM = 0.80
+  const minPriceLarge = cogsLarge / (1 - TARGET_GM)
+  const minPriceSmall = cogsSmall / (1 - TARGET_GM)
 
   // Waterfall bar widths (% of retail)
   function barPct(cost: number, retail: number) {
@@ -171,14 +176,14 @@ export default function UnitEconomicsPage() {
   function MarginRow({ price, cogs }: { price: number; cogs: number }) {
     const margin = price > 0 ? ((price - cogs) / price * 100) : 0
     const profit = price - cogs
-    const color  = margin >= 65 ? 'text-green-600' : margin >= 50 ? 'text-yellow-600' : 'text-red-500'
+    const color  = margin >= 80 ? 'text-green-600' : margin >= 70 ? 'text-yellow-600' : 'text-red-500'
     return (
       <tr className="border-b border-gray-100 hover:bg-gray-50">
         <td className="py-2 px-3 font-medium">{fmtEur(price)}</td>
         <td className="py-2 px-3">{fmtEur(profit)}</td>
         <td className={`py-2 px-3 font-bold ${color}`}>{margin.toFixed(1)}%</td>
         <td className="py-2 px-3 text-gray-500 text-xs">
-          {margin >= 65 ? '✅ Great' : margin >= 50 ? '⚠️ Tight' : '❌ Too low'}
+          {margin >= 80 ? '✅ Target met' : margin >= 70 ? '⚠️ Below target' : '❌ Too low'}
         </td>
       </tr>
     )
@@ -303,9 +308,12 @@ export default function UnitEconomicsPage() {
                   />
                 </div>
                 <div className={`mt-2 text-center text-lg font-bold rounded-lg py-1 ${
-                  marginSmall >= 65 ? 'bg-green-50 text-green-600' :
-                  marginSmall >= 50 ? 'bg-yellow-50 text-yellow-600' : 'bg-red-50 text-red-500'}`}>
-                  {marginSmall.toFixed(1)}% margin &nbsp;·&nbsp; {fmtEur(retailSmall - cogsSmall)} profit
+                  marginSmall >= 80 ? 'bg-green-50 text-green-600' :
+                  marginSmall >= 70 ? 'bg-yellow-50 text-yellow-600' : 'bg-red-50 text-red-500'}`}>
+                  {marginSmall.toFixed(1)}% GM &nbsp;·&nbsp; {fmtEur(retailSmall - cogsSmall)} profit
+                </div>
+                <div className={`mt-1 text-center text-xs rounded px-2 py-0.5 ${marginSmall >= 80 ? 'text-green-600' : 'text-orange-500 font-semibold'}`}>
+                  {marginSmall >= 80 ? '✅ Above 80% target' : `⚠️ Min for 80% GM: ${fmtEur(minPriceSmall)}`}
                 </div>
               </div>
             </div>
@@ -347,9 +355,12 @@ export default function UnitEconomicsPage() {
                   />
                 </div>
                 <div className={`mt-2 text-center text-lg font-bold rounded-lg py-1 ${
-                  marginLarge >= 65 ? 'bg-green-50 text-green-600' :
-                  marginLarge >= 50 ? 'bg-yellow-50 text-yellow-600' : 'bg-red-50 text-red-500'}`}>
-                  {marginLarge.toFixed(1)}% margin &nbsp;·&nbsp; {fmtEur(retailLarge - cogsLarge)} profit
+                  marginLarge >= 80 ? 'bg-green-50 text-green-600' :
+                  marginLarge >= 70 ? 'bg-yellow-50 text-yellow-600' : 'bg-red-50 text-red-500'}`}>
+                  {marginLarge.toFixed(1)}% GM &nbsp;·&nbsp; {fmtEur(retailLarge - cogsLarge)} profit
+                </div>
+                <div className={`mt-1 text-center text-xs rounded px-2 py-0.5 ${marginLarge >= 80 ? 'text-green-600' : 'text-orange-500 font-semibold'}`}>
+                  {marginLarge >= 80 ? '✅ Above 80% target' : `⚠️ Min for 80% GM: ${fmtEur(minPriceLarge)}`}
                 </div>
               </div>
             </div>
