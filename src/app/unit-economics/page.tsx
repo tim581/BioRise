@@ -57,7 +57,7 @@ export default function UnitEconomicsPage() {
 
   // --- Packaging cost ---
   const [pkgLarge,         setPkgLarge]         = useState(1.00)
-  const [pkgSmallBag,      setPkgSmallBag]      = useState(0.20)
+  const [pkgSmallBag,      setPkgSmallBag]      = useState(0.10)
   const [pkgBox,           setPkgBox]           = useState(1.50)
 
   // --- Labor ---
