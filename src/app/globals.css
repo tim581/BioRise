@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  @apply box-border;
+}
+
+html {
+  @apply scroll-smooth;
+}
+
+body {
+  @apply antialiased;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  @apply w-2 h-2;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-slate-100;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-400 rounded hover:bg-slate-500;
+}
+
+/* Forms */
+input,
+textarea,
+select {
+  @apply bg-white border border-slate-300 rounded px-3 py-2 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+}
+
+button {
+  @apply font-medium transition;
+}
+
+button.primary {
+  @apply bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded;
+}
+
+button.secondary {
+  @apply bg-slate-200 text-slate-900 hover:bg-slate-300 px-4 py-2 rounded;
+}
+
+/* Tables */
+table {
+  @apply w-full text-sm;
+}
+
+thead {
+  @apply bg-slate-100 border-b border-slate-200;
+}
+
+th {
+  @apply px-4 py-3 text-left font-semibold text-slate-700;
+}
+
+td {
+  @apply px-4 py-3 border-b border-slate-100;
+}
+
+tbody tr:hover {
+  @apply bg-slate-50;
+}
+
+/* Cards */
+.card {
+  @apply bg-white rounded-lg border border-slate-200 p-6;
+}
+
+.card-header {
+  @apply pb-4 border-b border-slate-200 mb-4;
+}
+
+.card-header h2 {
+  @apply text-lg font-semibold text-slate-900;
+}
+
+/* Badges */
+.badge {
+  @apply inline-block px-3 py-1 text-sm font-medium rounded;
+}
+
+.badge-success {
+  @apply bg-green-100 text-green-800;
+}
+
+.badge-warning {
+  @apply bg-yellow-100 text-yellow-800;
+}
+
+.badge-danger {
+  @apply bg-red-100 text-red-800;
+}
+
+.badge-info {
+  @apply bg-blue-100 text-blue-800;
+}
+
+/* Loading states */
+.skeleton {
+  @apply bg-slate-200 rounded animate-pulse;
+}
