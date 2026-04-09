@@ -32,6 +32,7 @@ export default function RootLayout({
               <NavLink href="/ingredients" label="🌾 Ingredients" />
               <NavLink href="/formulations" label="🍲 Formulations" />
               <NavLink href="/skus" label="📦 SKUs" />
+              <NavLink href="/pricing" label="💶 Ingredient Pricing" />
               <NavLink
                 href="/unit-economics"
                 label="💰 Unit Economics"
