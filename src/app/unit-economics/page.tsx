@@ -1,26 +1,31 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getAllSKUs } from '@/lib/supabase';
+import { getAllSKUUnitEconomics, getAllProductSKUs } from '@/lib/supabase';
+import * as Types from '@/lib/types';
 
 export default function UnitEconomicsPage() {
-  const [skus, setSkus] = useState<any[]>([]);
+  const [economics, setEconomics] = useState<Types.SKUUnitEconomics[]>([]);
+  const [skus, setSkus] = useState<Types.ProductSKU[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadSKUs();
-  }, []);
-
-  async function loadSKUs() {
-    try {
-      const data = await getAllSKUs();
-      setSkus(data);
-    } catch (error) {
-      console.error('Failed to load SKUs:', error);
-    } finally {
+    async function load() {
+      setLoading(true);
+      const [econ, skuData] = await Promise.all([
+        getAllSKUUnitEconomics(),
+        getAllProductSKUs(),
+      ]);
+      setEconomics(econ);
+      setSkus(skuData);
       setLoading(false);
     }
-  }
+    load();
+  }, []);
+
+  const getSKUName = (skuId: number) => {
+    return skus.find(s => s.id === skuId)?.product_name || `SKU #${skuId}`;
+  };
 
   return (
     <div className="space-y-6">
@@ -28,102 +33,72 @@ export default function UnitEconomicsPage() {
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Unit Economics</h1>
           <p className="text-slate-600 mt-1">
-            COGS tracking, cost breakdown & scenario modeling
+            COGS breakdown & margin analysis
           </p>
         </div>
       </div>
 
-      {/* SUMMARY CARDS */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-lg border border-slate-200 p-6">
-          <p className="text-sm text-slate-600 mb-2">Total SKUs</p>
-          <p className="text-3xl font-bold text-slate-900">{skus.length}</p>
-        </div>
-        <div className="bg-white rounded-lg border border-slate-200 p-6">
-          <p className="text-sm text-slate-600 mb-2">Avg COGS</p>
-          <p className="text-3xl font-bold text-slate-900">
-            €
-            {skus.length > 0
-              ? (
-                  skus.reduce(
-                    (sum, sku) =>
-                      sum + (sku.unit_economics?.[0]?.total_cogs || 0),
-                    0
-                  ) / skus.length
-                ).toFixed(2)
-              : '0.00'}
-          </p>
-        </div>
-        <div className="bg-white rounded-lg border border-slate-200 p-6">
-          <p className="text-sm text-slate-600 mb-2">Avg Margin</p>
-          <p className="text-3xl font-bold text-green-600">
-            {skus.length > 0
-              ? (
-                  skus.reduce(
-                    (sum, sku) =>
-                      sum + (sku.unit_economics?.[0]?.gross_margin_percent || 0),
-                    0
-                  ) / skus.length
-                ).toFixed(1)
-              : '0.0'}
-            %
-          </p>
-        </div>
-      </div>
-
-      {/* SKUS TABLE */}
-      <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
-        <table>
-          <thead>
-            <tr>
-              <th>SKU Name</th>
-              <th>Pack Size</th>
-              <th>Raw Materials</th>
-              <th>Processing</th>
-              <th>Packaging</th>
-              <th>Total COGS</th>
-              <th>Margin %</th>
-            </tr>
-          </thead>
-          <tbody>
-            {skus.map((sku) => {
-              const econ = sku.unit_economics?.[0];
-              return (
-                <tr key={sku.id}>
-                  <td className="font-medium text-slate-900">{sku.name}</td>
-                  <td className="text-slate-600">{sku.pack_size}</td>
-                  <td className="text-slate-600">
-                    €{econ?.raw_material_cost?.toFixed(2) || '0.00'}
+      {loading ? (
+        <div className="text-center py-8 text-slate-600">Loading unit economics...</div>
+      ) : economics.length > 0 ? (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-100 border-b border-slate-200">
+              <tr>
+                <th className="px-4 py-3 text-left font-semibold text-slate-900">SKU</th>
+                <th className="px-4 py-3 text-right font-semibold text-slate-900">Raw Material</th>
+                <th className="px-4 py-3 text-right font-semibold text-slate-900">Blending</th>
+                <th className="px-4 py-3 text-right font-semibold text-slate-900">Freeze-Dry</th>
+                <th className="px-4 py-3 text-right font-semibold text-slate-900">QC</th>
+                <th className="px-4 py-3 text-right font-semibold text-slate-900">Packaging</th>
+                <th className="px-4 py-3 text-right font-semibold text-slate-900">Carton</th>
+                <th className="px-4 py-3 text-right font-semibold text-slate-900 bg-blue-50">Total COGS</th>
+                <th className="px-4 py-3 text-right font-semibold text-slate-900">Margin %</th>
+              </tr>
+            </thead>
+            <tbody>
+              {economics.map(econ => (
+                <tr key={econ.id} className="border-b border-slate-200 hover:bg-slate-50">
+                  <td className="px-4 py-3 font-medium text-slate-900">
+                    {getSKUName(econ.sku_id)}
                   </td>
-                  <td className="text-slate-600">
-                    €{econ?.blending_cost?.toFixed(2) || '0.00'}
+                  <td className="px-4 py-3 text-right font-mono text-slate-600">
+                    €{econ.raw_material_cost_eur.toFixed(2)}
                   </td>
-                  <td className="text-slate-600">
-                    €
-                    {(
-                      (econ?.packaging_bag_cost || 0) +
-                      (econ?.packaging_carton_cost || 0)
-                    ).toFixed(2)}
+                  <td className="px-4 py-3 text-right font-mono text-slate-600">
+                    €{econ.blending_cost_eur.toFixed(2)}
                   </td>
-                  <td className="font-medium text-slate-900">
-                    €{econ?.total_cogs?.toFixed(2) || '0.00'}
+                  <td className="px-4 py-3 text-right font-mono text-slate-600">
+                    €{econ.freeze_dry_cost_eur.toFixed(2)}
                   </td>
-                  <td className="text-green-600 font-medium">
-                    {econ?.gross_margin_percent?.toFixed(1) || '0.0'}%
+                  <td className="px-4 py-3 text-right font-mono text-slate-600">
+                    €{econ.quality_check_cost_eur.toFixed(2)}
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono text-slate-600">
+                    €{econ.packaging_cost_eur.toFixed(2)}
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono text-slate-600">
+                    €{econ.carton_cost_eur.toFixed(2)}
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono text-slate-900 font-semibold bg-blue-50">
+                    €{econ.total_cogs_eur ? econ.total_cogs_eur.toFixed(2) : '0.00'}
+                  </td>
+                  <td className="px-4 py-3 text-right font-mono">
+                    {econ.gross_margin_percent ? (
+                      <span className={econ.gross_margin_percent > 50 ? 'text-green-600 font-semibold' : 'text-orange-600'}>
+                        {econ.gross_margin_percent.toFixed(1)}%
+                      </span>
+                    ) : (
+                      '-'
+                    )}
                   </td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {skus.length === 0 && !loading && (
-        <div className="bg-slate-50 rounded-lg border border-slate-200 p-6 text-center">
-          <p className="text-slate-600">
-            No SKUs yet. Create formulations and packaging combinations first.
-          </p>
+              ))}
+            </tbody>
+          </table>
         </div>
+      ) : (
+        <div className="text-center py-8 text-slate-600">No unit economics data yet</div>
       )}
     </div>
   );

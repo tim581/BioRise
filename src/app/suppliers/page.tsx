@@ -1,34 +1,36 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getAllSuppliers } from '@/lib/supabase';
-import type { Supplier } from '@/lib/types';
+import { getAllSuppliers, getSupplierCategories } from '@/lib/supabase';
+import * as Types from '@/lib/types';
 
 export default function SuppliersPage() {
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [suppliers, setSuppliers] = useState<Types.Supplier[]>([]);
+  const [categories, setCategories] = useState<Types.SupplierCategory[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterCountry, setFilterCountry] = useState<string>('');
+  const [filter, setFilter] = useState('all');
 
   useEffect(() => {
-    loadSuppliers();
-  }, []);
-
-  async function loadSuppliers() {
-    try {
-      const data = await getAllSuppliers();
-      setSuppliers(data);
-    } catch (error) {
-      console.error('Failed to load suppliers:', error);
-    } finally {
+    async function load() {
+      setLoading(true);
+      const [supplierData, categoryData] = await Promise.all([
+        getAllSuppliers(),
+        getSupplierCategories(),
+      ]);
+      setSuppliers(supplierData);
+      setCategories(categoryData);
       setLoading(false);
     }
-  }
+    load();
+  }, []);
 
-  const filtered = filterCountry
-    ? suppliers.filter((s) => s.location_country === filterCountry)
-    : suppliers;
+  const filtered = filter === 'all' 
+    ? suppliers 
+    : suppliers.filter(s => s.category_id === parseInt(filter));
 
-  const countries = [...new Set(suppliers.map((s) => s.location_country))].sort();
+  const getCategoryName = (catId: number) => {
+    return categories.find(c => c.id === catId)?.name || 'Unknown';
+  };
 
   return (
     <div className="space-y-6">
@@ -36,86 +38,95 @@ export default function SuppliersPage() {
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Suppliers</h1>
           <p className="text-slate-600 mt-1">
-            {filtered.length} suppliers • Belgium/EU focus
+            Raw material & co-packing partners • {suppliers.length} total
           </p>
         </div>
+        <button className="btn btn-primary">+ Add Supplier</button>
       </div>
 
-      {/* FILTERS */}
-      <div className="flex gap-4">
-        <select
-          value={filterCountry}
-          onChange={(e) => setFilterCountry(e.target.value)}
-          className="px-4 py-2 border border-slate-300 rounded text-slate-900"
+      {/* FILTER BY CATEGORY */}
+      <div className="flex gap-2 flex-wrap">
+        <button
+          onClick={() => setFilter('all')}
+          className={`px-4 py-2 rounded-lg font-medium transition ${
+            filter === 'all'
+              ? 'bg-blue-500 text-white'
+              : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+          }`}
         >
-          <option value="">All Countries</option>
-          {countries.map((country) => (
-            <option key={country} value={country}>
-              {country}
-            </option>
-          ))}
-        </select>
+          All ({suppliers.length})
+        </button>
+        {categories.map(cat => {
+          const count = suppliers.filter(s => s.category_id === cat.id).length;
+          return (
+            <button
+              key={cat.id}
+              onClick={() => setFilter(cat.id.toString())}
+              className={`px-4 py-2 rounded-lg font-medium transition ${
+                filter === cat.id.toString()
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-slate-200 text-slate-700 hover:bg-slate-300'
+              }`}
+            >
+              {cat.name} ({count})
+            </button>
+          );
+        })}
       </div>
 
       {/* SUPPLIERS TABLE */}
-      <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
-        {loading ? (
-          <div className="p-6 text-center text-slate-600">Loading...</div>
-        ) : (
-          <table>
-            <thead>
+      {loading ? (
+        <div className="text-center py-8 text-slate-600">Loading suppliers...</div>
+      ) : filtered.length > 0 ? (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-slate-100 border-b border-slate-200">
               <tr>
-                <th>Name</th>
-                <th>Category</th>
-                <th>Location</th>
-                <th>Contact</th>
-                <th>Lead Time</th>
-                <th>Quality</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-900">Name</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-900">Category</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-900">Location</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-900">Contact</th>
+                <th className="px-4 py-3 text-left font-semibold text-slate-900">Status</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map((supplier) => (
-                <tr key={supplier.id}>
-                  <td>
-                    <span className="font-medium text-slate-900">
-                      {supplier.name}
-                    </span>
+              {filtered.map(supplier => (
+                <tr key={supplier.id} className="border-b border-slate-200 hover:bg-slate-50">
+                  <td className="px-4 py-3">
+                    <div className="font-medium text-slate-900">{supplier.name}</div>
+                    <div className="text-xs text-slate-500 mt-0.5">{supplier.description}</div>
                   </td>
-                  <td className="text-slate-600">{supplier.category_id}</td>
-                  <td className="text-slate-600">
-                    {supplier.location_city}, {supplier.location_country}
+                  <td className="px-4 py-3 text-slate-600">
+                    {getCategoryName(supplier.category_id)}
                   </td>
-                  <td className="text-slate-600">
-                    {supplier.email && (
-                      <a
-                        href={`mailto:${supplier.email}`}
-                        className="text-blue-600 hover:underline"
-                      >
-                        {supplier.email}
-                      </a>
-                    )}
-                  </td>
-                  <td className="text-slate-600">
-                    {supplier.lead_time_days
-                      ? `${supplier.lead_time_days} days`
+                  <td className="px-4 py-3 text-slate-600 text-sm">
+                    {supplier.location_city && supplier.location_country
+                      ? `${supplier.location_city}, ${supplier.location_country}`
                       : '-'}
                   </td>
-                  <td>
-                    <span className="badge badge-info">
-                      {supplier.quality_grade || 'N/A'}
-                    </span>
+                  <td className="px-4 py-3 text-sm">
+                    {supplier.email ? (
+                      <a href={`mailto:${supplier.email}`} className="text-blue-600 hover:underline">
+                        {supplier.email}
+                      </a>
+                    ) : (
+                      <span className="text-slate-400">-</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    {supplier.verified ? (
+                      <span className="badge badge-success">Verified</span>
+                    ) : (
+                      <span className="badge badge-warning">Pending</span>
+                    )}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        )}
-      </div>
-
-      {filtered.length === 0 && !loading && (
-        <div className="bg-slate-50 rounded-lg border border-slate-200 p-6 text-center">
-          <p className="text-slate-600">No suppliers found</p>
         </div>
+      ) : (
+        <div className="text-center py-8 text-slate-600">No suppliers found</div>
       )}
     </div>
   );

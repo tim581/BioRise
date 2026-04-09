@@ -23,15 +23,6 @@ export default function IngredientsPage() {
     }
   }
 
-  const categorized = ingredients.reduce(
-    (acc, ing) => {
-      if (!acc[ing.category]) acc[ing.category] = [];
-      acc[ing.category].push(ing);
-      return acc;
-    },
-    {} as Record<string, Ingredient[]>
-  );
-
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -44,62 +35,54 @@ export default function IngredientsPage() {
         <button className="primary">+ Add Ingredient</button>
       </div>
 
-      {/* BY CATEGORY */}
+      {/* INGREDIENTS TABLE */}
       {loading ? (
         <div className="text-center py-8 text-slate-600">Loading...</div>
       ) : (
-        <div className="space-y-8">
-          {Object.entries(categorized).map(([category, items]) => (
-            <div key={category}>
-              <h2 className="text-lg font-semibold text-slate-900 mb-4 capitalize">
-                {category}
-              </h2>
-              <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Unit</th>
-                      <th>Cost/Unit</th>
-                      <th>Organic</th>
-                      <th>Shelf Life</th>
-                      <th>Supplier</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {items.map((ing) => (
-                      <tr key={ing.id}>
-                        <td className="font-medium text-slate-900">
-                          {ing.name}
-                        </td>
-                        <td className="text-slate-600">{ing.unit}</td>
-                        <td className="text-slate-600">
-                          {ing.cost_per_unit
-                            ? `€${ing.cost_per_unit.toFixed(2)}`
-                            : '-'}
-                        </td>
-                        <td>
-                          {ing.organic_certified ? (
-                            <span className="badge badge-success">Yes</span>
-                          ) : (
-                            <span className="text-slate-400">-</span>
-                          )}
-                        </td>
-                        <td className="text-slate-600">
-                          {ing.shelf_life_days
-                            ? `${ing.shelf_life_days} days`
-                            : '-'}
-                        </td>
-                        <td className="text-slate-600 text-sm">
-                          {ing.primary_supplier_id ? 'Assigned' : '-'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+        <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+          {ingredients.length > 0 ? (
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Description</th>
+                  <th>Unit</th>
+                  <th>Quality Standard</th>
+                  <th>Shelf Life</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ingredients.map((ing) => (
+                  <tr key={ing.id}>
+                    <td className="font-medium text-slate-900">
+                      {ing.name}
+                    </td>
+                    <td className="text-slate-600 text-sm">
+                      {ing.description || '-'}
+                    </td>
+                    <td className="text-slate-600">
+                      {ing.unit_of_measure || '-'}
+                    </td>
+                    <td className="text-slate-600 text-sm">
+                      {ing.target_quality_standard || '-'}
+                    </td>
+                    <td className="text-slate-600">
+                      {ing.shelf_life_days
+                        ? `${ing.shelf_life_days} days`
+                        : '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="p-6 text-center">
+              <p className="text-slate-600">
+                No ingredients yet. Start by adding your core ingredients.
+              </p>
+              <button className="primary mt-4">Add First Ingredient</button>
             </div>
-          ))}
+          )}
         </div>
       )}
 
