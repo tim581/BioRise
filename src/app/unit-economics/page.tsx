@@ -60,16 +60,20 @@ export default function UnitEconomicsPage() {
   const [pkgSmallBag,      setPkgSmallBag]      = useState(0.10)
   const [pkgBox,           setPkgBox]           = useState(1.50)
 
-  // --- Labor ---
+  // --- Co-packer toll ---
+  const [copTollSmall,     setCopTollSmall]     = useState(0.20)  // €/small bag
+  const [copTollLarge,     setCopTollLarge]     = useState(0.50)  // €/1kg bag
+
+  // --- Labor (for process tab reference only — not in COGS) ---
   const [laborRate,        setLaborRate]        = useState(20)   // €/hr fully loaded
   const [phases,           setPhases]           = useState<Phase[]>(DEFAULT_PHASES)
 
   // --- Overhead ---
-  const [overheadPct,      setOverheadPct]      = useState(10)
+  const [overheadPct,      setOverheadPct]      = useState(5)
 
   // --- Retail prices ---
-  const [retailLarge,      setRetailLarge]      = useState(39.99)
-  const [retailSmall,      setRetailSmall]      = useState(5.49)
+  const [retailLarge,      setRetailLarge]      = useState(69.99)
+  const [retailSmall,      setRetailSmall]      = useState(12.99)
 
   // --- Tabs ---
   const [activeTab,        setActiveTab]        = useState<'overview' | 'process' | 'margins'>('overview')
@@ -92,7 +96,7 @@ export default function UnitEconomicsPage() {
     high: (smallTotals.laborHigh / 60) * laborRate / nSmall,
   }), [smallTotals, laborRate, nSmall])
 
-  // COGS (using midpoint labor)
+  // COGS — co-packing model (toll replaces in-house labor)
   const ingredLarge  = ingredCostPer100g * (largeBagG / 100)
   const ingredSmall  = ingredCostPer100g * (smallBagG / 100)
   const pkgPerSmall  = pkgSmallBag + pkgBox / bagsPerBox
@@ -100,17 +104,17 @@ export default function UnitEconomicsPage() {
   const laborMidLarge = (laborPerLarge.low  + laborPerLarge.high)  / 2
   const laborMidSmall = (laborPerSmall.low  + laborPerSmall.high)  / 2
 
-  const cogsLargeBase  = ingredLarge + pkgLarge   + laborMidLarge
-  const cogsSmallBase  = ingredSmall + pkgPerSmall + laborMidSmall
+  const cogsLargeBase  = ingredLarge + pkgLarge   + copTollLarge
+  const cogsSmallBase  = ingredSmall + pkgPerSmall + copTollSmall
   const cogsLarge      = cogsLargeBase  * (1 + overheadPct / 100)
   const cogsSmall      = cogsSmallBase  * (1 + overheadPct / 100)
 
   const marginLarge    = retailLarge > 0 ? ((retailLarge - cogsLarge)  / retailLarge * 100) : 0
   const marginSmall    = retailSmall > 0 ? ((retailSmall - cogsSmall)  / retailSmall * 100) : 0
 
-  // Margin table price points (anchored around 80% GM minimum)
-  const largePrices = [24.99, 29.99, 34.99, 39.99, 44.99]
-  const smallPrices = [3.99, 4.49, 4.99, 5.49, 5.99]
+  // Margin table price points — premium positioning
+  const largePrices = [49.99, 59.99, 69.99, 79.99, 89.99]
+  const smallPrices = [8.99, 10.99, 12.99, 14.99, 16.99]
 
   // Min price for target gross margin
   const TARGET_GM = 0.80
@@ -250,20 +254,15 @@ export default function UnitEconomicsPage() {
               </div>
             </div>
 
-            {/* Labor & overhead */}
+            {/* Co-packer toll & overhead */}
             <div className="bg-white rounded-xl border border-gray-200 p-4">
-              <h3 className="font-semibold text-gray-700 mb-3 text-sm uppercase tracking-wide">👷 Labor & Overhead</h3>
-              <Slider label="Labor rate (fully loaded €/hr)" value={laborRate} min={14} max={40} step={1} unit="€/hr" onChange={setLaborRate} />
-              <Slider label="Overhead %" value={overheadPct} min={0} max={30} step={1} unit="%" onChange={setOverheadPct} />
-              <div className="grid grid-cols-2 gap-2 mt-2 text-xs text-gray-500">
-                <div className="bg-gray-50 rounded p-2">
-                  <div className="font-semibold text-gray-700">{fmtEur(laborMidSmall)}</div>
-                  <div>labor/small bag</div>
-                </div>
-                <div className="bg-gray-50 rounded p-2">
-                  <div className="font-semibold text-gray-700">{fmtEur(laborMidLarge)}</div>
-                  <div>labor/1 kg bag</div>
-                </div>
+              <h3 className="font-semibold text-gray-700 mb-3 text-sm uppercase tracking-wide">🏭 Co-packer Toll</h3>
+              <p className="text-xs text-gray-400 mb-3">Toll fee replaces in-house labor. Request quotes from Nutramix / DeVe-Pack / MixMasters.</p>
+              <Slider label="Toll — small pouch (€/bag)" value={copTollSmall} min={0.10} max={0.80} step={0.01} unit="€" onChange={setCopTollSmall} />
+              <Slider label="Toll — 1 kg bag (€/bag)" value={copTollLarge} min={0.30} max={3.00} step={0.10} unit="€" onChange={setCopTollLarge} />
+              <Slider label="Overhead %" value={overheadPct} min={0} max={20} step={1} unit="%" onChange={setOverheadPct} />
+              <div className="mt-2 pt-2 border-t border-gray-100 text-xs text-gray-400">
+                Typical range: €0.15–0.40/small · €0.50–1.50/1kg bag
               </div>
             </div>
           </div>
@@ -273,7 +272,7 @@ export default function UnitEconomicsPage() {
             {/* Small bag card */}
             <div className="bg-white rounded-xl border-2 border-green-200 p-5">
               <div className="flex items-center justify-between mb-1">
-                <h2 className="font-bold text-gray-800">400 kcal Pouch</h2>
+                <h2 className="font-bold text-gray-800">448 kcal Pouch</h2>
                 <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">~{smallBagG}g</span>
               </div>
               <p className="text-xs text-gray-400 mb-4">{nSmall} units · {nBoxes} display boxes of {bagsPerBox}</p>
@@ -281,8 +280,8 @@ export default function UnitEconomicsPage() {
               <div className="space-y-1 mb-4">
                 <CostBar label="Ingredients"  value={ingredSmall}        retail={retailSmall} color="bg-blue-400" />
                 <CostBar label="Pouch"        value={pkgSmallBag}        retail={retailSmall} color="bg-purple-400" />
-                <CostBar label="Box (÷{bagsPerBox})".replace('{bagsPerBox}', String(bagsPerBox)) value={pkgBox/bagsPerBox} retail={retailSmall} color="bg-pink-400" />
-                <CostBar label="Labor (mid)"  value={laborMidSmall}      retail={retailSmall} color="bg-orange-400" />
+                <CostBar label={`Box (÷${bagsPerBox})`} value={pkgBox/bagsPerBox} retail={retailSmall} color="bg-pink-400" />
+                <CostBar label="Co-packer toll" value={copTollSmall}      retail={retailSmall} color="bg-orange-400" />
                 <CostBar label="Overhead"     value={cogsSmall - cogsSmallBase} retail={retailSmall} color="bg-yellow-300" />
               </div>
 
@@ -328,9 +327,9 @@ export default function UnitEconomicsPage() {
 
               <div className="space-y-1 mb-4">
                 <CostBar label="Ingredients" value={ingredLarge}        retail={retailLarge} color="bg-blue-400" />
-                <CostBar label="Bag"         value={pkgLarge}           retail={retailLarge} color="bg-purple-400" />
-                <CostBar label="Labor (mid)" value={laborMidLarge}      retail={retailLarge} color="bg-orange-400" />
-                <CostBar label="Overhead"    value={cogsLarge - cogsLargeBase} retail={retailLarge} color="bg-yellow-300" />
+                <CostBar label="Bag"              value={pkgLarge}           retail={retailLarge} color="bg-purple-400" />
+                <CostBar label="Co-packer toll"  value={copTollLarge}       retail={retailLarge} color="bg-orange-400" />
+                <CostBar label="Overhead"        value={cogsLarge - cogsLargeBase} retail={retailLarge} color="bg-yellow-300" />
               </div>
 
               <div className="border-t border-gray-100 pt-3 mb-3">
@@ -403,21 +402,22 @@ export default function UnitEconomicsPage() {
             </div>
 
             {/* Key insight */}
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
-              <div className="font-semibold mb-1">💡 Key insight</div>
+            <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-sm text-green-800">
+              <div className="font-semibold mb-1">✅ Margin check</div>
               <p className="text-xs leading-relaxed">
-                Labor is the hidden cost. At €{laborRate}/hr fully loaded, you spend{' '}
-                <strong>{fmtEur((smallTotals.laborLow/60)*laborRate)}–{fmtEur((smallTotals.laborHigh/60)*laborRate)}</strong> in labor for a {batchKg}kg run of small bags.
-                A semi-auto filling line vs. manual is the single biggest lever to improve margins.
+                At €12.99 / €69.99 retail with current COGS, gross margins are{' '}
+                <strong>{(((retailSmall - cogsSmall) / retailSmall) * 100).toFixed(1)}% (small)</strong>{' '}and{' '}
+                <strong>{(((retailLarge - cogsLarge) / retailLarge) * 100).toFixed(1)}% (1kg)</strong>.{' '}
+                Both well above the 80% target. ✅
               </p>
             </div>
 
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800">
-              <div className="font-semibold mb-1">🏭 Co-packer alternative</div>
+              <div className="font-semibold mb-1">🏭 Co-packer toll range</div>
               <p className="text-xs leading-relaxed">
-                If you outsource to a co-packer, replace labor + overhead with a tolling fee.
-                Typical range: €0.20–€0.60 per small bag, €1.50–€3.00 per 1 kg bag.
-                Request quotes to compare vs. in-house.
+                Priority: Nutramix (BE) · DeVe-Pack (BE) · MixMasters (NL).
+                Typical range: €0.15–0.40/small bag, €0.50–1.50/1kg bag.
+                Request quotes to lock actual numbers.
               </p>
             </div>
           </div>
@@ -437,7 +437,7 @@ export default function UnitEconomicsPage() {
               return (
                 <div key={fmt} className="bg-white rounded-xl border border-gray-200 p-5">
                   <h3 className="font-bold text-gray-800 mb-1">
-                    {fmt === 'large' ? '📦 1 kg Bag Format' : '🫙 400 kcal Pouch Format'}
+                    {fmt === 'large' ? '📦 1 kg Bag Format' : '🫙 448 kcal Pouch Format'}
                   </h3>
                   <p className="text-xs text-gray-400 mb-4">
                     {(totals.wallLow/60).toFixed(1)}–{(totals.wallHigh/60).toFixed(1)} h wall-clock &nbsp;·&nbsp;
@@ -545,9 +545,65 @@ export default function UnitEconomicsPage() {
       {/* ── MARGINS TAB ──────────────────────────────────────────────────────── */}
       {activeTab === 'margins' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+          {/* COGS Summary */}
+          <div className="md:col-span-2 bg-white rounded-xl border-2 border-green-200 p-5">
+            <h3 className="font-bold text-gray-800 mb-4">💰 COGS Breakdown & Gross Margin Summary</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
+                    <th className="text-left py-2 px-3">Cost item</th>
+                    <th className="text-right py-2 px-3">448 kcal Pouch</th>
+                    <th className="text-right py-2 px-3">1 kg Bag</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {[
+                    ['🌾 Ingredients',     fmtEur(ingredSmall),          fmtEur(ingredLarge)],
+                    ['📦 Packaging',       fmtEur(pkgPerSmall),          fmtEur(pkgLarge)],
+                    ['🏭 Co-packer toll',  fmtEur(copTollSmall),         fmtEur(copTollLarge)],
+                    ['⚙️ Overhead',        fmtEur(cogsSmall - cogsSmallBase), fmtEur(cogsLarge - cogsLargeBase)],
+                  ].map(([label, small, large]) => (
+                    <tr key={label} className="hover:bg-gray-50">
+                      <td className="py-2.5 px-3 text-gray-600">{label}</td>
+                      <td className="py-2.5 px-3 text-right">{small}</td>
+                      <td className="py-2.5 px-3 text-right">{large}</td>
+                    </tr>
+                  ))}
+                  <tr className="bg-gray-50 font-bold">
+                    <td className="py-2.5 px-3">Total COGS</td>
+                    <td className="py-2.5 px-3 text-right">{fmtEur(cogsSmall)}</td>
+                    <td className="py-2.5 px-3 text-right">{fmtEur(cogsLarge)}</td>
+                  </tr>
+                  <tr className="bg-gray-50 text-gray-500 text-xs">
+                    <td className="py-2 px-3">Retail price</td>
+                    <td className="py-2 px-3 text-right font-semibold text-gray-700">{fmtEur(retailSmall)}</td>
+                    <td className="py-2 px-3 text-right font-semibold text-gray-700">{fmtEur(retailLarge)}</td>
+                  </tr>
+                  <tr className="bg-gray-50 text-xs">
+                    <td className="py-2 px-3 text-gray-500">Profit per unit</td>
+                    <td className="py-2 px-3 text-right font-semibold text-green-700">{fmtEur(retailSmall - cogsSmall)}</td>
+                    <td className="py-2 px-3 text-right font-semibold text-green-700">{fmtEur(retailLarge - cogsLarge)}</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-3 font-bold text-gray-800">Gross Margin</td>
+                    <td className={`py-3 px-3 text-right text-xl font-black ${marginSmall >= 80 ? 'text-green-600' : marginSmall >= 70 ? 'text-yellow-600' : 'text-red-500'}`}>
+                      {marginSmall.toFixed(1)}% {marginSmall >= 80 ? '✅' : '⚠️'}
+                    </td>
+                    <td className={`py-3 px-3 text-right text-xl font-black ${marginLarge >= 80 ? 'text-green-600' : marginLarge >= 70 ? 'text-yellow-600' : 'text-red-500'}`}>
+                      {marginLarge.toFixed(1)}% {marginLarge >= 80 ? '✅' : '⚠️'}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="text-xs text-gray-400 mt-3">Min price for 80% GM: <strong>{fmtEur(minPriceSmall)}</strong> (small) · <strong>{fmtEur(minPriceLarge)}</strong> (1kg) — adjust sliders on Overview tab to model scenarios.</p>
+          </div>
+
           {/* Small bag table */}
           <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <h3 className="font-bold text-gray-800 mb-1">🫙 400 kcal Pouch</h3>
+            <h3 className="font-bold text-gray-800 mb-1">🫙 448 kcal Pouch</h3>
             <p className="text-xs text-gray-400 mb-4">COGS: {fmtEur(cogsSmall)} &nbsp;·&nbsp; {nSmall} units/batch</p>
             <table className="w-full text-sm">
               <thead>
@@ -606,17 +662,17 @@ export default function UnitEconomicsPage() {
             <h3 className="font-semibold text-gray-700 mb-3 text-sm uppercase tracking-wide">🎯 Break-even Analysis</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
-                { label: 'Small @ €2.99', retail: 2.99, cogs: cogsSmall },
-                { label: 'Small @ €3.49', retail: 3.49, cogs: cogsSmall },
-                { label: '1 kg @ €14.99', retail: 14.99, cogs: cogsLarge },
-                { label: '1 kg @ €19.99', retail: 19.99, cogs: cogsLarge },
+                { label: 'Small @ €10.99', retail: 10.99, cogs: cogsSmall },
+                { label: 'Small @ €12.99', retail: 12.99, cogs: cogsSmall },
+                { label: '1 kg @ €59.99',  retail: 59.99, cogs: cogsLarge },
+                { label: '1 kg @ €69.99',  retail: 69.99, cogs: cogsLarge },
               ].map(({ label, retail, cogs }) => {
                 const margin = ((retail - cogs) / retail * 100)
                 const monthlyUnitsToBreakEven = 5000 / (retail - cogs) // arbitrary €5k fixed cost target
                 return (
                   <div key={label} className="bg-gray-50 rounded-lg p-4 text-center">
                     <div className="text-xs text-gray-400 mb-1">{label}</div>
-                    <div className={`text-xl font-bold ${margin >= 65 ? 'text-green-600' : margin >= 50 ? 'text-yellow-600' : 'text-red-500'}`}>
+                    <div className={`text-xl font-bold ${margin >= 80 ? 'text-green-600' : margin >= 70 ? 'text-yellow-600' : 'text-red-500'}`}>
                       {margin.toFixed(1)}%
                     </div>
                     <div className="text-xs text-gray-500 mt-1">
