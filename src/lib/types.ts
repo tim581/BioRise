@@ -22,6 +22,13 @@ export interface Ingredient {
   shelf_stability_score?: number;
   shelf_stability_notes?: string;
   shelf_life_months?: number;
+  // Sourcing
+  origin_region?: string;
+  origin_countries?: string;
+  supply_risk?: string;         // 'low' | 'medium' | 'high'
+  eu_sourcing_difficulty?: number; // 1=trivial, 5=very hard
+  eu_sourcing_notes?: string;
+  known_eu_distributors?: string;
 }
 
 export interface IngredientCategory {

@@ -20,8 +20,8 @@ const MACROS_PER_100G: Record<number, {
   6:  { kcal: 534, protein: 18.0, carbs: 29.0, fat: 42.0, fiber: 27.0, sugar: 1.5,  sodium_mg: 30  }, // Ground Flaxseed
   7:  { kcal: 579, protein: 21.0, carbs: 22.0, fat: 50.0, fiber: 12.0, sugar: 4.4,  sodium_mg: 1   }, // Almonds
   8:  { kcal: 654, protein: 15.0, carbs: 14.0, fat: 65.0, fiber: 6.7,  sugar: 2.6,  sodium_mg: 2   }, // Walnuts
-  17: { kcal: 350, protein: 3.0,  carbs: 85.0, fat: 1.0,  fiber: 9.0,  sugar: 57.0, sodium_mg: 5   }, // Wild Blueberry FD
-  18: { kcal: 340, protein: 3.0,  carbs: 82.0, fat: 1.0,  fiber: 4.0,  sugar: 64.0, sodium_mg: 5   }, // Tart Cherry FD
+  17: { kcal: 350, protein: 3.0,  carbs: 85.0, fat: 1.0,  fiber: 9.0,  sugar: 57.0, sodium_mg: 5   }, // Blueberry FD (EU Cultivated)
+  18: { kcal: 340, protein: 3.0,  carbs: 82.0, fat: 1.0,  fiber: 4.0,  sugar: 64.0, sodium_mg: 5   }, // Sour Cherry FD (EU)
   25: { kcal: 329, protein: 25.0, carbs: 49.0, fat: 6.0,  fiber: 20.0, sugar: 6.0,  sodium_mg: 42  }, // Moringa
   29: { kcal: 325, protein: 12.0, carbs: 74.0, fat: 1.0,  fiber: 14.0, sugar: 50.0, sodium_mg: 106 }, // Beetroot Powder
   27: { kcal: 400, protein: 30.0, carbs: 50.0, fat: 5.0,  fiber: 15.0, sugar: 10.0, sodium_mg: 40  }, // Broccoli Sprout
@@ -34,8 +34,29 @@ const MACROS_PER_100G: Record<number, {
 // ============================================================
 const PRICE_PER_KG: Record<number, number> = {
   1: 0.60, 2: 9.00, 3: 7.50, 32: 6.00, 5: 2.50, 6: 1.20,
-  7: 6.50, 8: 6.00, 17: 38.00, 18: 28.00, 25: 8.00,
+  7: 6.50, 8: 6.00, 17: 18.00, 18: 22.00, 25: 8.00,
   29: 12.00, 27: 65.00, 13: 25.00, 14: 0.30,
+};
+
+// ============================================================
+// ORIGIN FLAGS — EU flag where sourced in EU, 🌍 for imports
+// ============================================================
+const ORIGIN_FLAGS: Record<number, { flag: string; label: string }> = {
+  1:  { flag: '🇳🇱🇩🇪', label: 'NL / DE / PL' },
+  2:  { flag: '🇳🇱🇮🇪', label: 'NL / IE' },
+  3:  { flag: '🇳🇱🇫🇷', label: 'NL / FR' },
+  32: { flag: '🌍', label: 'SE Asia (PH/TH)' },
+  5:  { flag: '🌍', label: 'S. America (BO/AR)' },
+  6:  { flag: '🇵🇱🇩🇪', label: 'PL / DE' },
+  7:  { flag: '🇪🇸', label: 'Spain (EU)' },
+  8:  { flag: '🇫🇷🇷🇴', label: 'FR / RO' },
+  17: { flag: '🇵🇱🇩🇪', label: 'PL / DE / NL' },
+  18: { flag: '🇵🇱🇩🇪', label: 'PL / DE / HU' },
+  25: { flag: '🌍', label: 'India / Kenya' },
+  29: { flag: '🇳🇱🇩🇪', label: 'NL / DE / PL' },
+  27: { flag: '🇩🇪🇮🇹', label: 'DE / IT' },
+  13: { flag: '🌍', label: 'CN / PY (EU proc.)' },
+  14: { flag: '🇫🇷🇵🇹', label: 'FR / PT / ES' },
 };
 
 function computeNutrition(items: FormulationIngredientEnriched[]) {
@@ -378,6 +399,7 @@ export default function FormulationsPage() {
                             <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Protein</th>
                             <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase">Digest.</th>
                             <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase">Shelf</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Origin</th>
                             <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Cost/svg</th>
                           </tr>
                         </thead>
@@ -406,6 +428,14 @@ export default function FormulationsPage() {
                                 <td className="px-4 py-3 text-right text-blue-600">{prot.toFixed(1)}g</td>
                                 <td className="px-4 py-3 text-center">{scoreEmoji(item.ingredient?.digestibility_score)}</td>
                                 <td className="px-4 py-3 text-center">{scoreEmoji(item.ingredient?.shelf_stability_score)}</td>
+                                <td className="px-4 py-3">
+                                  {ORIGIN_FLAGS[item.ingredient_id] ? (
+                                    <div className="flex flex-col">
+                                      <span className="text-base leading-tight">{ORIGIN_FLAGS[item.ingredient_id].flag}</span>
+                                      <span className="text-xs text-slate-400 leading-tight whitespace-nowrap">{ORIGIN_FLAGS[item.ingredient_id].label}</span>
+                                    </div>
+                                  ) : '—'}
+                                </td>
                                 <td className="px-4 py-3 text-right text-slate-700 font-mono text-xs">
                                   {cost > 0 ? `€${cost.toFixed(3)}` : '—'}
                                 </td>
@@ -419,7 +449,7 @@ export default function FormulationsPage() {
                             <td className="px-4 py-3 text-right text-slate-500">100%</td>
                             <td className="px-4 py-3 text-right text-slate-900">{Math.round(nutrition.kcal)}</td>
                             <td className="px-4 py-3 text-right text-blue-700">{nutrition.protein.toFixed(1)}g</td>
-                            <td colSpan={2} className="px-4 py-3" />
+                            <td colSpan={3} className="px-4 py-3" />
                             <td className="px-4 py-3 text-right text-slate-900 font-mono text-xs">€{ingredientCost.toFixed(3)}</td>
                           </tr>
                         </tbody>
