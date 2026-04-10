@@ -48,12 +48,12 @@ function fmtEur(v: number, dec = 2) {
 export default function UnitEconomicsPage() {
   // --- Batch config ---
   const [batchKg,          setBatchKg]          = useState(100)
-  const [smallBagG,        setSmallBagG]        = useState(101)
+  const [smallBagG,        setSmallBagG]        = useState(103)
   const [largeBagG,        setLargeBagG]        = useState(981)
   const [bagsPerBox,       setBagsPerBox]       = useState(10)
 
   // --- Ingredient cost ---
-  const [ingredCostPer100g, setIngredCostPer100g] = useState(0.40)
+  const [ingredCostPer100g, setIngredCostPer100g] = useState(0.55)
 
   // --- Packaging cost ---
   const [pkgLarge,         setPkgLarge]         = useState(1.00)
