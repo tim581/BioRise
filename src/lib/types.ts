@@ -15,6 +15,13 @@ export interface Ingredient {
   bulk_density_g_per_ml?: number;
   notes?: string;
   created_at?: string;
+  // Digestibility (1=hardest, 5=easiest)
+  digestibility_score?: number;
+  digestibility_notes?: string;
+  // Shelf stability (1=poorest, 5=best)
+  shelf_stability_score?: number;
+  shelf_stability_notes?: string;
+  shelf_life_months?: number;
 }
 
 export interface IngredientCategory {

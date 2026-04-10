@@ -175,6 +175,43 @@ export async function getFormulationIngredients(
   return data || [];
 }
 
+// Enriched formulation ingredient — includes full ingredient details
+export interface FormulationIngredientEnriched extends Types.FormulationIngredient {
+  ingredient: Types.Ingredient;
+}
+
+export async function getFormulationIngredientsWithDetails(
+  formulationId: number
+): Promise<FormulationIngredientEnriched[]> {
+  const { data, error } = await supabase
+    .from('formulation_ingredients')
+    .select(`
+      *,
+      ingredients (
+        id, name, category_id, description, unit_of_measure,
+        bulk_density_g_per_ml, notes,
+        digestibility_score, digestibility_notes,
+        shelf_stability_score, shelf_stability_notes, shelf_life_months,
+        ingredient_categories (name)
+      )
+    `)
+    .eq('formulation_id', formulationId)
+    .order('order_priority', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching enriched formulation ingredients:', error);
+    return [];
+  }
+
+  return (data || []).map((row: any) => ({
+    ...row,
+    ingredient: {
+      ...row.ingredients,
+      category_name: row.ingredients?.ingredient_categories?.name ?? undefined,
+    },
+  }));
+}
+
 // ============================================
 // SKUS
 // ============================================
