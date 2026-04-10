@@ -37,6 +37,7 @@ export default function RootLayout({
                 href="/unit-economics"
                 label="💰 Unit Economics"
               />
+              <NavLink href="/audiences" label="🎯 Target Audiences" />
               <NavLink href="/competitors" label="🏆 Competitors" />
               <NavLink href="/batches" label="📋 Batches" />
             </nav>
