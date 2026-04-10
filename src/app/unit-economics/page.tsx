@@ -64,6 +64,17 @@ export default function UnitEconomicsPage() {
   const [copTollSmall,     setCopTollSmall]     = useState(0.20)  // €/small bag
   const [copTollLarge,     setCopTollLarge]     = useState(0.50)  // €/1kg bag
 
+  // --- Logistics (landed cost to 3PL) ---
+  // Leg 1: suppliers → co-packer (direct delivery from ingredient suppliers, split across batch)
+  const [freightSmall,     setFreightSmall]     = useState(0.05)  // €/small bag
+  const [freightLarge,     setFreightLarge]     = useState(0.25)  // €/1kg bag
+  // Leg 2: co-packer → 3PL (finished pallet delivery)
+  const [deliverySmall,    setDeliverySmall]    = useState(0.03)  // €/small bag
+  const [deliveryLarge,    setDeliveryLarge]    = useState(0.15)  // €/1kg bag
+  // Leg 3: 3PL inbound fee (receiving + put-away charged by warehouse on intake)
+  const [threePlSmall,     setThreePlSmall]     = useState(0.10)  // €/small bag
+  const [threePlLarge,     setThreePlLarge]     = useState(0.50)  // €/1kg bag
+
   // --- Labor (for process tab reference only — not in COGS) ---
   const [laborRate,        setLaborRate]        = useState(20)   // €/hr fully loaded
   const [phases,           setPhases]           = useState<Phase[]>(DEFAULT_PHASES)
@@ -104,8 +115,10 @@ export default function UnitEconomicsPage() {
   const laborMidLarge = (laborPerLarge.low  + laborPerLarge.high)  / 2
   const laborMidSmall = (laborPerSmall.low  + laborPerSmall.high)  / 2
 
-  const cogsLargeBase  = ingredLarge + pkgLarge   + copTollLarge
-  const cogsSmallBase  = ingredSmall + pkgPerSmall + copTollSmall
+  const totalLogisticsSmall = freightSmall + deliverySmall + threePlSmall
+  const totalLogisticsLarge = freightLarge + deliveryLarge + threePlLarge
+  const cogsLargeBase  = ingredLarge + pkgLarge   + copTollLarge + totalLogisticsLarge
+  const cogsSmallBase  = ingredSmall + pkgPerSmall + copTollSmall + totalLogisticsSmall
   const cogsLarge      = cogsLargeBase  * (1 + overheadPct / 100)
   const cogsSmall      = cogsSmallBase  * (1 + overheadPct / 100)
 
@@ -197,7 +210,7 @@ export default function UnitEconomicsPage() {
     <div className="max-w-6xl mx-auto p-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Unit Economics</h1>
-        <p className="text-gray-500 text-sm mt-1">Full COGS model — 100 kg batch · 1 formulation · 2 formats</p>
+        <p className="text-gray-500 text-sm mt-1">Landed cost model — suppliers → co-packer → 3PL · 1 formulation · 2 formats · outbound fulfillment carried by customer</p>
       </div>
 
       {/* Tabs */}
@@ -265,6 +278,41 @@ export default function UnitEconomicsPage() {
                 Typical range: €0.15–0.40/small · €0.50–1.50/1kg bag
               </div>
             </div>
+
+            {/* Logistics — landed cost to 3PL */}
+            <div className="bg-white rounded-xl border border-gray-200 p-4">
+              <h3 className="font-semibold text-gray-700 mb-1 text-sm uppercase tracking-wide">🚚 Logistics</h3>
+              <p className="text-xs text-gray-400 mb-3">Full landed cost: suppliers → co-packer → 3PL. All 3 legs included in COGS.</p>
+
+              <div className="text-xs font-medium text-gray-500 mb-1 mt-2">Leg 1 — Suppliers → Co-packer</div>
+              <p className="text-xs text-gray-400 mb-2">Ingredient suppliers ship direct to Nutramix/DeVe-Pack. Split across batch.</p>
+              <Slider label="Inbound freight — small bag" value={freightSmall} min={0} max={0.30} step={0.01} unit="€" onChange={setFreightSmall} />
+              <Slider label="Inbound freight — 1 kg bag" value={freightLarge} min={0} max={1.50} step={0.05} unit="€" onChange={setFreightLarge} />
+
+              <div className="text-xs font-medium text-gray-500 mb-1 mt-3">Leg 2 — Co-packer → 3PL</div>
+              <p className="text-xs text-gray-400 mb-2">Finished pallets delivered from co-packer to your 3PL warehouse.</p>
+              <Slider label="Outbound freight — small bag" value={deliverySmall} min={0} max={0.20} step={0.01} unit="€" onChange={setDeliverySmall} />
+              <Slider label="Outbound freight — 1 kg bag" value={deliveryLarge} min={0} max={1.00} step={0.05} unit="€" onChange={setDeliveryLarge} />
+
+              <div className="text-xs font-medium text-gray-500 mb-1 mt-3">Leg 3 — 3PL Inbound Fee</div>
+              <p className="text-xs text-gray-400 mb-2">Receiving + put-away fee charged by warehouse on intake.</p>
+              <Slider label="3PL inbound — small bag" value={threePlSmall} min={0} max={0.40} step={0.01} unit="€" onChange={setThreePlSmall} />
+              <Slider label="3PL inbound — 1 kg bag" value={threePlLarge} min={0} max={2.00} step={0.05} unit="€" onChange={setThreePlLarge} />
+
+              <div className="mt-3 pt-2 border-t border-gray-100 grid grid-cols-2 gap-2 text-xs">
+                <div className="bg-gray-50 rounded p-2">
+                  <div className="font-semibold text-gray-700">{fmtEur(totalLogisticsSmall)}</div>
+                  <div className="text-gray-400">total logistics / small bag</div>
+                </div>
+                <div className="bg-gray-50 rounded p-2">
+                  <div className="font-semibold text-gray-700">{fmtEur(totalLogisticsLarge)}</div>
+                  <div className="text-gray-400">total logistics / 1 kg bag</div>
+                </div>
+              </div>
+              <div className="mt-2 text-xs text-gray-400">
+                📬 Outbound fulfillment (pick &amp; pack + last-mile) carried by customer
+              </div>
+            </div>
           </div>
 
           {/* Middle — SKU cards */}
@@ -278,21 +326,24 @@ export default function UnitEconomicsPage() {
               <p className="text-xs text-gray-400 mb-4">{nSmall} units · {nBoxes} display boxes of {bagsPerBox}</p>
 
               <div className="space-y-1 mb-4">
-                <CostBar label="Ingredients"  value={ingredSmall}        retail={retailSmall} color="bg-blue-400" />
-                <CostBar label="Pouch"        value={pkgSmallBag}        retail={retailSmall} color="bg-purple-400" />
-                <CostBar label={`Box (÷${bagsPerBox})`} value={pkgBox/bagsPerBox} retail={retailSmall} color="bg-pink-400" />
-                <CostBar label="Co-packer toll" value={copTollSmall}      retail={retailSmall} color="bg-orange-400" />
-                <CostBar label="Overhead"     value={cogsSmall - cogsSmallBase} retail={retailSmall} color="bg-yellow-300" />
+                <CostBar label="🌾 Ingredients"            value={ingredSmall}              retail={retailSmall} color="bg-blue-400" />
+                <CostBar label="📦 Pouch"                  value={pkgSmallBag}              retail={retailSmall} color="bg-purple-400" />
+                <CostBar label={`📦 Box (÷${bagsPerBox})`} value={pkgBox/bagsPerBox}        retail={retailSmall} color="bg-pink-400" />
+                <CostBar label="🏭 Co-packer toll"         value={copTollSmall}             retail={retailSmall} color="bg-orange-400" />
+                <CostBar label="🚚 Freight in"             value={freightSmall}             retail={retailSmall} color="bg-teal-400" />
+                <CostBar label="🚚 Freight out"            value={deliverySmall}            retail={retailSmall} color="bg-cyan-400" />
+                <CostBar label="🏬 3PL inbound"            value={threePlSmall}             retail={retailSmall} color="bg-indigo-400" />
+                <CostBar label="⚙️ Overhead"               value={cogsSmall - cogsSmallBase} retail={retailSmall} color="bg-yellow-300" />
               </div>
 
               <div className="border-t border-gray-100 pt-3 mb-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Total COGS</span>
+                  <span className="text-gray-500 font-medium">Landed COGS</span>
                   <span className="font-bold text-gray-900">{fmtEur(cogsSmall)}</span>
                 </div>
                 <div className="flex justify-between text-xs text-gray-400 mt-0.5">
-                  <span>Labor range</span>
-                  <span>{fmtEur(laborPerSmall.low)} – {fmtEur(laborPerSmall.high)}</span>
+                  <span>Logistics subtotal</span>
+                  <span>{fmtEur(totalLogisticsSmall)}</span>
                 </div>
               </div>
 
@@ -326,20 +377,23 @@ export default function UnitEconomicsPage() {
               <p className="text-xs text-gray-400 mb-4">{nLarge} units per batch</p>
 
               <div className="space-y-1 mb-4">
-                <CostBar label="Ingredients" value={ingredLarge}        retail={retailLarge} color="bg-blue-400" />
-                <CostBar label="Bag"              value={pkgLarge}           retail={retailLarge} color="bg-purple-400" />
-                <CostBar label="Co-packer toll"  value={copTollLarge}       retail={retailLarge} color="bg-orange-400" />
-                <CostBar label="Overhead"        value={cogsLarge - cogsLargeBase} retail={retailLarge} color="bg-yellow-300" />
+                <CostBar label="🌾 Ingredients"    value={ingredLarge}               retail={retailLarge} color="bg-blue-400" />
+                <CostBar label="📦 Bag"            value={pkgLarge}                  retail={retailLarge} color="bg-purple-400" />
+                <CostBar label="🏭 Co-packer toll" value={copTollLarge}              retail={retailLarge} color="bg-orange-400" />
+                <CostBar label="🚚 Freight in"     value={freightLarge}              retail={retailLarge} color="bg-teal-400" />
+                <CostBar label="🚚 Freight out"    value={deliveryLarge}             retail={retailLarge} color="bg-cyan-400" />
+                <CostBar label="🏬 3PL inbound"    value={threePlLarge}              retail={retailLarge} color="bg-indigo-400" />
+                <CostBar label="⚙️ Overhead"       value={cogsLarge - cogsLargeBase} retail={retailLarge} color="bg-yellow-300" />
               </div>
 
               <div className="border-t border-gray-100 pt-3 mb-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Total COGS</span>
+                  <span className="text-gray-500 font-medium">Landed COGS</span>
                   <span className="font-bold text-gray-900">{fmtEur(cogsLarge)}</span>
                 </div>
                 <div className="flex justify-between text-xs text-gray-400 mt-0.5">
-                  <span>Labor range</span>
-                  <span>{fmtEur(laborPerLarge.low)} – {fmtEur(laborPerLarge.high)}</span>
+                  <span>Logistics subtotal</span>
+                  <span>{fmtEur(totalLogisticsLarge)}</span>
                 </div>
               </div>
 
@@ -374,21 +428,28 @@ export default function UnitEconomicsPage() {
                   {[
                     ['Batch size', `${batchKg} kg`],
                     ['', ''],
-                    ['Small bags', `${nSmall} units`],
+                    ['🫙 Small bags', `${nSmall} units`],
                     ['Display boxes', `${nBoxes} × ${bagsPerBox}`],
-                    ['Wall-clock time', `${(smallTotals.wallLow/60).toFixed(1)}–${(smallTotals.wallHigh/60).toFixed(1)} hrs`],
-                    ['Labor person-hrs', `${(smallTotals.laborLow/60).toFixed(1)}–${(smallTotals.laborHigh/60).toFixed(1)} hrs`],
-                    ['Labor cost/batch', `${fmtEur((smallTotals.laborLow/60)*laborRate)}–${fmtEur((smallTotals.laborHigh/60)*laborRate)}`],
-                    ['COGS per small bag', fmtEur(cogsSmall)],
-                    ['Revenue (all small)', fmtEur(retailSmall * nSmall)],
-                    ['Gross profit', fmtEur((retailSmall - cogsSmall) * nSmall)],
+                    ['Ingredients/bag', fmtEur(ingredSmall)],
+                    ['Packaging/bag', fmtEur(pkgPerSmall)],
+                    ['Co-packer toll', fmtEur(copTollSmall)],
+                    ['Logistics/bag', fmtEur(totalLogisticsSmall)],
+                    ['Landed COGS/bag', fmtEur(cogsSmall)],
+                    ['Retail price', fmtEur(retailSmall)],
+                    ['Gross margin', `${marginSmall.toFixed(1)}%`],
+                    ['GP per bag', fmtEur(retailSmall - cogsSmall)],
+                    ['GP this batch', fmtEur((retailSmall - cogsSmall) * nSmall)],
                     ['', ''],
-                    ['1 kg bags', `${nLarge} units`],
-                    ['Wall-clock time', `${(largeTotals.wallLow/60).toFixed(1)}–${(largeTotals.wallHigh/60).toFixed(1)} hrs`],
-                    ['Labor cost/batch', `${fmtEur((largeTotals.laborLow/60)*laborRate)}–${fmtEur((largeTotals.laborHigh/60)*laborRate)}`],
-                    ['COGS per 1 kg bag', fmtEur(cogsLarge)],
-                    ['Revenue (all large)', fmtEur(retailLarge * nLarge)],
-                    ['Gross profit', fmtEur((retailLarge - cogsLarge) * nLarge)],
+                    ['📦 1 kg bags', `${nLarge} units`],
+                    ['Ingredients/bag', fmtEur(ingredLarge)],
+                    ['Packaging/bag', fmtEur(pkgLarge)],
+                    ['Co-packer toll', fmtEur(copTollLarge)],
+                    ['Logistics/bag', fmtEur(totalLogisticsLarge)],
+                    ['Landed COGS/bag', fmtEur(cogsLarge)],
+                    ['Retail price', fmtEur(retailLarge)],
+                    ['Gross margin', `${marginLarge.toFixed(1)}%`],
+                    ['GP per bag', fmtEur(retailLarge - cogsLarge)],
+                    ['GP this batch', fmtEur((retailLarge - cogsLarge) * nLarge)],
                   ].map(([k, v], i) => k === '' ? (
                     <tr key={i}><td colSpan={2} className="py-1"><hr className="border-gray-100"/></td></tr>
                   ) : (

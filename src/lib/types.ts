@@ -22,6 +22,10 @@ export interface Ingredient {
   shelf_stability_score?: number;
   shelf_stability_notes?: string;
   shelf_life_months?: number;
+  // Flavour
+  flavor_intensity?: number;    // 1=undetectable, 5=dominates
+  flavor_profile?: string;
+  flavor_notes?: string;
   // Sourcing
   origin_region?: string;
   origin_countries?: string;

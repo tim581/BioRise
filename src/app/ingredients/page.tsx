@@ -62,12 +62,34 @@ function DensityLabel({ value }: { value?: number }) {
   return <span className="text-xs text-rose-600">dense</span>;
 }
 
+// ─── Flavor intensity bar ─────────────────────────────────────────────────────
+const FLAVOR_COLORS = ['bg-slate-200', 'bg-emerald-400', 'bg-lime-400', 'bg-amber-400', 'bg-orange-500', 'bg-rose-500'];
+const FLAVOR_LABELS = ['', 'Undetectable', 'Very subtle', 'Mild', 'Noticeable ⚠️', 'Dominant ⚠️'];
+
+function FlavorBar({ intensity, profile }: { intensity?: number; profile?: string }) {
+  if (!intensity) return <span className="text-slate-300 text-xs">—</span>;
+  return (
+    <div className="flex flex-col gap-0.5">
+      <div className="flex items-center gap-0.5">
+        {[1,2,3,4,5].map(i => (
+          <div
+            key={i}
+            className={`w-3 h-3 rounded-sm ${i <= intensity ? FLAVOR_COLORS[intensity] : 'bg-slate-100'}`}
+          />
+        ))}
+        <span className="text-xs text-slate-500 ml-1.5">{FLAVOR_LABELS[intensity]}</span>
+      </div>
+      {profile && <p className="text-xs text-slate-400 italic leading-snug">{profile}</p>}
+    </div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function IngredientsPage() {
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState<string>('All');
-  const [sortBy, setSortBy] = useState<'name' | 'category' | 'density'>('category');
+  const [sortBy, setSortBy] = useState<'name' | 'category' | 'density' | 'flavor'>('category');
   const [search, setSearch] = useState('');
 
   useEffect(() => { loadIngredients(); }, []);
@@ -95,6 +117,7 @@ export default function IngredientsPage() {
     .filter(i => !search || i.name.toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => {
       if (sortBy === 'density') return (a.bulk_density_g_per_ml ?? 0) - (b.bulk_density_g_per_ml ?? 0);
+      if (sortBy === 'flavor') return (b.flavor_intensity ?? 0) - (a.flavor_intensity ?? 0);
       if (sortBy === 'category') {
         const catA = categoryOrder.indexOf(a.category_name ?? '');
         const catB = categoryOrder.indexOf(b.category_name ?? '');
@@ -197,7 +220,7 @@ export default function IngredientsPage() {
           {/* Sort */}
           <div className="flex gap-1 ml-auto">
             <span className="text-xs text-slate-400 self-center mr-1">Sort:</span>
-            {(['category', 'name', 'density'] as const).map(s => (
+            {(['category', 'name', 'density', 'flavor'] as const).map(s => (
               <button
                 key={s}
                 onClick={() => setSortBy(s)}
@@ -207,7 +230,7 @@ export default function IngredientsPage() {
                     : 'bg-white text-slate-500 border-slate-200 hover:border-slate-400'
                 }`}
               >
-                {s === 'category' ? '🗂 Category' : s === 'name' ? 'A–Z' : 'Density ↑'}
+                {s === 'category' ? '🗂 Category' : s === 'name' ? 'A–Z' : s === 'density' ? 'Density ↑' : '👅 Flavour ↓'}
               </button>
             ))}
           </div>
@@ -237,19 +260,19 @@ export default function IngredientsPage() {
                   <tbody>
                     {items.map((ing, idx) => (
                       <tr key={ing.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
-                        <td className="px-4 py-3 w-64">
+                        <td className="px-4 py-3 w-56">
                           <p className="font-medium text-slate-900 text-sm">{ing.name}</p>
                           {ing.notes && <p className="text-xs text-slate-400 mt-0.5 leading-snug">{ing.notes}</p>}
                         </td>
-                        <td className="px-4 py-3 text-xs text-slate-500 w-12">{ing.unit_of_measure}</td>
-                        <td className="px-4 py-3 w-40">
+                        <td className="px-4 py-3 text-xs text-slate-500 w-10">{ing.unit_of_measure}</td>
+                        <td className="px-4 py-3 w-48">
+                          <FlavorBar intensity={ing.flavor_intensity} profile={ing.flavor_profile} />
+                          {ing.flavor_notes && (
+                            <p className="text-xs text-slate-400 mt-1 leading-snug max-w-xs">{ing.flavor_notes}</p>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 w-36">
                           <DensityBar value={ing.bulk_density_g_per_ml} />
-                        </td>
-                        <td className="px-4 py-3 w-24">
-                          <DensityLabel value={ing.bulk_density_g_per_ml} />
-                        </td>
-                        <td className="px-4 py-3 text-xs text-slate-400">
-                          {ing.shelf_life_days ? `${ing.shelf_life_days}d shelf life` : ''}
                         </td>
                         <td className="px-4 py-3 text-xs text-slate-400 text-right">
                           {ing.target_quality_standard && (
@@ -274,10 +297,9 @@ export default function IngredientsPage() {
               <tr>
                 <th>Ingredient</th>
                 <th>Category</th>
-                <th>Unit</th>
+                <th>Flavour Impact</th>
                 <th>Bulk Density</th>
                 <th>Flow</th>
-                <th>Shelf Life</th>
               </tr>
             </thead>
             <tbody>
@@ -288,12 +310,14 @@ export default function IngredientsPage() {
                     {ing.notes && <p className="text-xs text-slate-400 font-normal mt-0.5">{ing.notes}</p>}
                   </td>
                   <td><CategoryBadge name={ing.category_name} /></td>
-                  <td className="text-slate-500 text-sm">{ing.unit_of_measure}</td>
+                  <td>
+                    <FlavorBar intensity={ing.flavor_intensity} profile={ing.flavor_profile} />
+                    {ing.flavor_notes && (
+                      <p className="text-xs text-slate-400 mt-1 max-w-xs leading-snug">{ing.flavor_notes}</p>
+                    )}
+                  </td>
                   <td><DensityBar value={ing.bulk_density_g_per_ml} /></td>
                   <td><DensityLabel value={ing.bulk_density_g_per_ml} /></td>
-                  <td className="text-slate-500 text-sm">
-                    {ing.shelf_life_days ? `${ing.shelf_life_days}d` : '—'}
-                  </td>
                 </tr>
               ))}
             </tbody>
