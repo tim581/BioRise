@@ -7,10 +7,12 @@ export interface Ingredient {
   id: number;
   name: string;
   category_id: number;
+  category_name?: string;   // joined from ingredient_categories
   description?: string;
   unit_of_measure: string;
   target_quality_standard?: string;
   shelf_life_days?: number;
+  bulk_density_g_per_ml?: number;
   notes?: string;
   created_at?: string;
 }
@@ -85,6 +87,8 @@ export interface Formulation {
   target_serving_grams?: number;
   target_calories?: number;
   total_dry_weight_grams?: number;
+  bulk_density_g_per_ml?: number;
+  estimated_volume_ml?: number;
   created_at?: string;
   updated_at?: string;
 }

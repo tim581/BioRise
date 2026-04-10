@@ -24,14 +24,18 @@ export const supabase = createClient(
 export async function getAllIngredients(): Promise<Types.Ingredient[]> {
   const { data, error } = await supabase
     .from('ingredients')
-    .select('*')
+    .select('*, ingredient_categories(name)')
     .order('name', { ascending: true });
   
   if (error) {
     console.error('Error fetching ingredients:', error);
     return [];
   }
-  return data || [];
+  // Flatten category name
+  return (data || []).map((row: any) => ({
+    ...row,
+    category_name: row.ingredient_categories?.name ?? undefined,
+  }));
 }
 
 export async function getIngredientsByCategory(
