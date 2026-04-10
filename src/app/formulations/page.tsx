@@ -22,7 +22,7 @@ const MACROS_PER_100G: Record<number, {
   8:  { kcal: 654, protein: 15.0, carbs: 14.0, fat: 65.0, fiber: 6.7,  sugar: 2.6,  sodium_mg: 2   }, // Walnuts
   17: { kcal: 350, protein: 3.0,  carbs: 85.0, fat: 1.0,  fiber: 9.0,  sugar: 57.0, sodium_mg: 5   }, // Blueberry FD (EU Cultivated)
   18: { kcal: 340, protein: 3.0,  carbs: 82.0, fat: 1.0,  fiber: 4.0,  sugar: 64.0, sodium_mg: 5   }, // Sour Cherry FD (EU)
-  25: { kcal: 329, protein: 25.0, carbs: 49.0, fat: 6.0,  fiber: 20.0, sugar: 6.0,  sodium_mg: 42  }, // Moringa
+
   29: { kcal: 325, protein: 12.0, carbs: 74.0, fat: 1.0,  fiber: 14.0, sugar: 50.0, sodium_mg: 106 }, // Beetroot Powder
   27: { kcal: 400, protein: 30.0, carbs: 50.0, fat: 5.0,  fiber: 15.0, sugar: 10.0, sodium_mg: 40  }, // Broccoli Sprout
   13: { kcal: 0,   protein: 0.0,  carbs: 0.0,  fat: 0.0,  fiber: 0.0,  sugar: 0.0,  sodium_mg: 0   }, // Stevia
@@ -34,7 +34,7 @@ const MACROS_PER_100G: Record<number, {
 // ============================================================
 const PRICE_PER_KG: Record<number, number> = {
   1: 0.60, 2: 9.00, 3: 7.50, 32: 6.00, 5: 2.50, 6: 1.20,
-  7: 6.50, 8: 6.00, 17: 18.00, 18: 22.00, 25: 8.00,
+  7: 6.50, 8: 6.00, 17: 18.00, 18: 22.00,
   29: 12.00, 27: 65.00, 13: 25.00, 14: 0.30,
 };
 
@@ -52,7 +52,6 @@ const ORIGIN_FLAGS: Record<number, { flag: string; label: string }> = {
   8:  { flag: '🇫🇷🇷🇴', label: 'FR / RO' },
   17: { flag: '🇵🇱🇩🇪', label: 'PL / DE / NL' },
   18: { flag: '🇵🇱🇩🇪', label: 'PL / DE / HU' },
-  25: { flag: '🌍', label: 'India / Kenya' },
   29: { flag: '🇳🇱🇩🇪', label: 'NL / DE / PL' },
   27: { flag: '🇩🇪🇮🇹', label: 'DE / IT' },
   13: { flag: '🌍', label: 'CN / PY (EU proc.)' },
