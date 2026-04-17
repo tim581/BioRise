@@ -2,17 +2,30 @@
 
 import { useEffect, useState } from 'react';
 import { getDashboardSummary } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import * as Types from '@/lib/types';
 
 export default function Dashboard() {
   const [summary, setSummary] = useState<Types.DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [maxInvestment, setMaxInvestment] = useState<number | null>(null);
 
   useEffect(() => {
     async function load() {
       setLoading(true);
-      const data = await getDashboardSummary();
+      const [data, cashflowRes] = await Promise.all([
+        getDashboardSummary(),
+        supabase
+          .from('cashflow_projections')
+          .select('cumulative_cashflow')
+          .order('cumulative_cashflow', { ascending: true })
+          .limit(1),
+      ]);
       setSummary(data);
+      if (cashflowRes.data && cashflowRes.data.length > 0) {
+        const min = cashflowRes.data[0].cumulative_cashflow;
+        setMaxInvestment(min < 0 ? Math.abs(min) : 0);
+      }
       setLoading(false);
     }
     load();
@@ -39,7 +52,7 @@ export default function Dashboard() {
       </div>
 
       {/* SUMMARY CARDS */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
         {/* SUPPLIERS */}
         <div className="bg-white rounded-lg border border-slate-200 p-6">
           <div className="text-xs font-semibold text-slate-500 uppercase">Total Suppliers</div>
@@ -84,6 +97,15 @@ export default function Dashboard() {
           </div>
           <p className="text-xs text-slate-600 mt-2">Per unit</p>
         </div>
+
+        {/* TOTAL INVESTMENT NEEDED */}
+        <div className="bg-white rounded-lg border border-slate-200 p-6">
+          <div className="text-xs font-semibold text-slate-500 uppercase">Investment Needed</div>
+          <div className="text-3xl font-bold text-red-600 mt-2">
+            {maxInvestment !== null ? `€${maxInvestment.toLocaleString('en-IE')}` : '—'}
+          </div>
+          <p className="text-xs text-slate-600 mt-2">Peak funding</p>
+        </div>
       </div>
 
       {/* QUICK ACTIONS */}
@@ -123,10 +145,17 @@ export default function Dashboard() {
           </p>
         </a>
 
+        <a href="/cashflow" className="bg-white rounded-lg border border-slate-200 p-6 hover:shadow-md transition">
+          <h3 className="font-semibold text-slate-900">💸 Cashflow Projections</h3>
+          <p className="text-sm text-slate-600 mt-1">
+            24-month financial model, revenue & runway
+          </p>
+        </a>
+
         <a href="/competitors" className="bg-white rounded-lg border border-slate-200 p-6 hover:shadow-md transition">
           <h3 className="font-semibold text-slate-900">Competitor Tracking</h3>
           <p className="text-sm text-slate-600 mt-1">
-            Market sentiment & pricing intelligence
+            Product benchmarking & ingredient intelligence
           </p>
         </a>
       </div>

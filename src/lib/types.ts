@@ -312,6 +312,43 @@ export interface DataValidationLog {
   created_at?: string;
 }
 
+// CASHFLOW PROJECTIONS
+export interface CashflowProjection {
+  id: number;
+  month_number: number;
+  month_label: string;
+  phase: 'exploration' | 'pre_launch' | 'launch' | 'growth' | 'scale';
+  revenue_d2c: number;
+  revenue_amazon: number;
+  revenue_subscriptions: number;
+  revenue_other: number;
+  cogs_ingredients: number;
+  cogs_packaging: number;
+  cogs_copacker: number;
+  cogs_freight: number;
+  cogs_3pl: number;
+  opex_marketing: number;
+  opex_ambassadors: number;
+  opex_ads_paid: number;
+  opex_content_production: number;
+  opex_software: number;
+  opex_legal_ip: number;
+  opex_packaging_design: number;
+  opex_product_dev: number;
+  opex_samples_testing: number;
+  opex_travel: number;
+  opex_salary: number;
+  opex_insurance: number;
+  opex_other: number;
+  capex_initial_inventory: number;
+  capex_equipment: number;
+  capex_other: number;
+  cumulative_cashflow: number;
+  units_sold: number;
+  active_subscribers: number;
+  assumptions?: string;
+}
+
 // DASHBOARD SUMMARY TYPES
 export interface DashboardSummary {
   total_suppliers: number;

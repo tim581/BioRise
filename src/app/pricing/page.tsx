@@ -28,36 +28,25 @@ interface SupplierQuote {
   quoted_at: string;
 }
 
+interface FormulationIngredient {
+  ingredient_id: number;
+  quantity_grams: number;
+  role: string | null;
+  ingredients: {
+    id: number;
+    name: string;
+  };
+}
+
 interface Ingredient {
   id: number;
   name: string;
   unit_of_measure: string;
   estimates: PriceEstimate[];
   quotes: SupplierQuote[];
-  // Formulation amounts (400 kcal bag)
   grams_per_bag: number;
+  role: string | null;
 }
-
-// Formulation amounts per bag (400 kcal)
-const FORMULATION: Record<number, number> = {
-  1: 40.0,   // Oats
-  2: 12.0,   // Whey
-  3: 8.0,    // Casein
-  4: 4.0,    // Collagen
-  5: 6.0,    // Chia
-  6: 6.0,    // Flax
-  7: 8.0,    // Almonds
-  8: 6.0,    // Walnuts
-  9: 4.0,    // Cacao
-  10: 0.8,   // Cinnamon
-  11: 1.2,   // Inulin
-  12: 2.0,   // Creatine
-  13: 0.4,   // Stevia
-  14: 0.4,   // Salt
-  15: 0.6,   // Turmeric
-  16: 2.0,   // L-Glutamine (optional)
-  17: 4.0,   // FD Blueberries (premium)
-};
 
 export default function PricingPage() {
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
@@ -82,20 +71,37 @@ export default function PricingPage() {
   async function fetchData() {
     setLoading(true);
     try {
-      const [ingRes, estRes, quotesRes] = await Promise.all([
+      const [ingRes, estRes, quotesRes, formRes] = await Promise.all([
         supabase.from('ingredients').select('*').order('id'),
         supabase.from('ingredient_price_estimates').select('*').order('price_per_kg_eur'),
         supabase.from('supplier_quotes').select('*').order('quoted_at', { ascending: false }),
+        supabase
+          .from('formulation_ingredients')
+          .select('ingredient_id, quantity_grams, role, ingredients(id, name)')
+          .eq('formulation_id', 1),
       ]);
 
       if (ingRes.error) throw ingRes.error;
+      if (formRes.error) throw formRes.error;
 
-      const ings: Ingredient[] = (ingRes.data || []).map((ing: { id: number; name: string; unit_of_measure: string }) => ({
-        ...ing,
-        estimates: (estRes.data || []).filter((e: PriceEstimate) => e.ingredient_id === ing.id),
-        quotes: (quotesRes.data || []).filter((q: SupplierQuote) => q.ingredient_id === ing.id),
-        grams_per_bag: FORMULATION[ing.id] || 0,
-      }));
+      // Build a map of ingredient_id -> quantity_grams from the locked formula
+      const formulaMap: Record<number, { grams: number; role: string | null }> = {};
+      (formRes.data || []).forEach((fi: FormulationIngredient) => {
+        formulaMap[fi.ingredient_id] = { grams: fi.quantity_grams, role: fi.role };
+      });
+
+      // Only show ingredients that are in the formula
+      const formulaIngredientIds = new Set(Object.keys(formulaMap).map(Number));
+
+      const ings: Ingredient[] = (ingRes.data || [])
+        .filter((ing: { id: number }) => formulaIngredientIds.has(ing.id))
+        .map((ing: { id: number; name: string; unit_of_measure: string }) => ({
+          ...ing,
+          estimates: (estRes.data || []).filter((e: PriceEstimate) => e.ingredient_id === ing.id),
+          quotes: (quotesRes.data || []).filter((q: SupplierQuote) => q.ingredient_id === ing.id),
+          grams_per_bag: formulaMap[ing.id]?.grams ?? 0,
+          role: formulaMap[ing.id]?.role ?? null,
+        }));
 
       setIngredients(ings);
     } catch (err: unknown) {
@@ -138,20 +144,10 @@ export default function PricingPage() {
       const { estimate, quote } = getCostPerBag(ing);
       if (estimate !== null) acc.estimate += estimate;
       if (quote !== null) acc.quote += quote;
+      acc.totalGrams += ing.grams_per_bag;
       return acc;
     },
-    { estimate: 0, quote: 0 }
-  );
-
-  const baseIngredients = ingredients.filter(i => i.id !== 16 && i.id !== 17);
-  const baseTotals = baseIngredients.reduce(
-    (acc, ing) => {
-      const { estimate, quote } = getCostPerBag(ing);
-      if (estimate !== null) acc.estimate += estimate;
-      if (quote !== null) acc.quote += quote;
-      return acc;
-    },
-    { estimate: 0, quote: 0 }
+    { estimate: 0, quote: 0, totalGrams: 0 }
   );
 
   async function submitQuote(ingredientId: number) {
@@ -186,20 +182,15 @@ export default function PricingPage() {
     <div>
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-slate-900">💰 Ingredient Pricing</h1>
-        <p className="text-slate-500 mt-1">Market estimates vs. actual supplier quotes — per ingredient and per bag</p>
+        <p className="text-slate-500 mt-1">Founder Formula v1 — {ingredients.length} ingredients, {totals.totalGrams.toFixed(1)}g per bag</p>
       </div>
 
       {/* COST SUMMARY CARDS */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-          <p className="text-xs text-blue-600 font-medium uppercase tracking-wide">Base Bag Cost (estimate)</p>
-          <p className="text-2xl font-bold text-blue-800 mt-1">€{baseTotals.estimate.toFixed(3)}</p>
-          <p className="text-xs text-blue-500 mt-1">excl. L-Glut & blueberries</p>
-        </div>
-        <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
-          <p className="text-xs text-purple-600 font-medium uppercase tracking-wide">Premium Bag Cost (estimate)</p>
-          <p className="text-2xl font-bold text-purple-800 mt-1">€{totals.estimate.toFixed(3)}</p>
-          <p className="text-xs text-purple-500 mt-1">incl. L-Glut + blueberries</p>
+          <p className="text-xs text-blue-600 font-medium uppercase tracking-wide">Formula Cost (estimate)</p>
+          <p className="text-2xl font-bold text-blue-800 mt-1">€{totals.estimate.toFixed(3)}</p>
+          <p className="text-xs text-blue-500 mt-1">{ingredients.length} ingredients total</p>
         </div>
         <div className="bg-green-50 border border-green-200 rounded-xl p-4">
           <p className="text-xs text-green-600 font-medium uppercase tracking-wide">Best Quoted Cost</p>
@@ -215,13 +206,18 @@ export default function PricingPage() {
           </p>
           <p className="text-xs text-orange-500 mt-1">need actual quotes</p>
         </div>
+        <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
+          <p className="text-xs text-purple-600 font-medium uppercase tracking-wide">Bag Weight</p>
+          <p className="text-2xl font-bold text-purple-800 mt-1">{totals.totalGrams.toFixed(1)}g</p>
+          <p className="text-xs text-purple-500 mt-1">Founder Formula v1</p>
+        </div>
       </div>
 
       {/* INGREDIENT PRICING TABLE */}
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden mb-8">
         <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
           <h2 className="font-semibold text-slate-800">Ingredient Price Breakdown</h2>
-          <span className="text-xs text-slate-400">Per bag = 400 kcal serving</span>
+          <span className="text-xs text-slate-400">Founder Formula v1 (locked)</span>
         </div>
 
         <div className="overflow-x-auto">
@@ -245,15 +241,12 @@ export default function PricingPage() {
                 const bestQuote = getBestQuotePrice(ing);
                 const { estimate: costEst, quote: costQuote } = getCostPerBag(ing);
                 const savings = getSavings(ing);
-                const isOptional = ing.id === 16;
-                const isPremium = ing.id === 17;
 
                 return (
-                  <tr key={ing.id} className={`hover:bg-slate-50 ${isOptional ? 'opacity-70' : ''}`}>
+                  <tr key={ing.id} className="hover:bg-slate-50">
                     <td className="px-4 py-3 font-medium text-slate-800">
                       {ing.name}
-                      {isOptional && <span className="ml-2 text-xs text-slate-400">(optional)</span>}
-                      {isPremium && <span className="ml-2 text-xs text-purple-500">(premium)</span>}
+                      {ing.role && <span className="ml-2 text-xs text-slate-400">({ing.role})</span>}
                     </td>
                     <td className="px-4 py-3 text-right text-slate-600">{ing.grams_per_bag}g</td>
                     <td className="px-4 py-3 text-right">
@@ -314,17 +307,10 @@ export default function PricingPage() {
             </tbody>
             <tfoot className="bg-slate-50 font-semibold text-sm border-t-2 border-slate-200">
               <tr>
-                <td className="px-4 py-3 text-slate-700" colSpan={4}>Base bag total (excl. L-Glut + blueberries)</td>
-                <td className="px-4 py-3 text-right font-mono text-blue-800">€{baseTotals.estimate.toFixed(4)}</td>
-                <td className="px-4 py-3"></td>
-                <td className="px-4 py-3 text-right font-mono text-green-800">
-                  {baseTotals.quote > 0 ? `€${baseTotals.quote.toFixed(4)}` : '—'}
+                <td className="px-4 py-3 text-slate-700" colSpan={4}>
+                  Formula total ({ingredients.length} ingredients, {totals.totalGrams.toFixed(1)}g)
                 </td>
-                <td className="px-4 py-3" colSpan={2}></td>
-              </tr>
-              <tr>
-                <td className="px-4 py-3 text-slate-700" colSpan={4}>Premium bag total (all ingredients)</td>
-                <td className="px-4 py-3 text-right font-mono text-purple-800">€{totals.estimate.toFixed(4)}</td>
+                <td className="px-4 py-3 text-right font-mono text-blue-800">€{totals.estimate.toFixed(4)}</td>
                 <td className="px-4 py-3"></td>
                 <td className="px-4 py-3 text-right font-mono text-green-800">
                   {totals.quote > 0 ? `€${totals.quote.toFixed(4)}` : '—'}
@@ -491,35 +477,6 @@ export default function PricingPage() {
           </div>
         </div>
       )}
-
-      {/* BLUEBERRY COST IMPACT BOX */}
-      <div className="mt-8 bg-purple-50 border border-purple-200 rounded-xl p-6">
-        <h3 className="font-semibold text-purple-800 mb-3">🫐 Freeze-Dried Blueberry Cost Impact (100kg batch)</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-          {[
-            { g: 3, label: 'Minimal (3g/bag)' },
-            { g: 4, label: 'Standard (4g/bag)' },
-            { g: 6, label: 'Premium (6g/bag)' },
-            { g: 8, label: 'Ultra (8g/bag)' },
-          ].map(({ g, label }) => {
-            const fdEst = ingredients.find(i => i.id === 17);
-            const pricePerKg = fdEst ? Math.min(...fdEst.estimates.map(e => e.price_per_kg_eur)) : 39;
-            const bagWeight = 99.4 + g; // base + blueberries
-            const bags = Math.floor(100000 / bagWeight);
-            const totalBluberries = (g * bags) / 1000;
-            const cost = totalBluberries * pricePerKg;
-            return (
-              <div key={g} className="bg-white rounded-lg p-3 border border-purple-100">
-                <p className="font-medium text-purple-700">{label}</p>
-                <p className="text-slate-600 mt-1">{bags} bags</p>
-                <p className="text-slate-600">{totalBluberries.toFixed(1)}kg needed</p>
-                <p className="font-bold text-purple-900 mt-1">€{cost.toFixed(0)} total</p>
-                <p className="text-xs text-slate-400">€{(cost / bags).toFixed(2)}/bag</p>
-              </div>
-            );
-          })}
-        </div>
-      </div>
     </div>
   );
 }

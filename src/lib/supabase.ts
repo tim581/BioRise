@@ -390,6 +390,23 @@ export async function getAllCompetitorSentiment(): Promise<Types.CompetitorSenti
 }
 
 // ============================================
+// CASHFLOW PROJECTIONS
+// ============================================
+
+export async function getCashflowProjections(): Promise<Types.CashflowProjection[]> {
+  const { data, error } = await supabase
+    .from('cashflow_projections')
+    .select('*')
+    .order('month_number', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching cashflow projections:', error);
+    return [];
+  }
+  return data || [];
+}
+
+// ============================================
 // DASHBOARD SUMMARY
 // ============================================
 
