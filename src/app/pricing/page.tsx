@@ -86,7 +86,8 @@ export default function PricingPage() {
 
       // Build a map of ingredient_id -> quantity_grams from the locked formula
       const formulaMap: Record<number, { grams: number; role: string | null }> = {};
-      (formRes.data || []).forEach((fi: FormulationIngredient) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (formRes.data || []).forEach((fi: any) => {
         formulaMap[fi.ingredient_id] = { grams: fi.quantity_grams, role: fi.role };
       });
 
