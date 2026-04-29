@@ -12,12 +12,21 @@ const CATEGORY_CONFIG: Record<string, {
   border: string;
   dot: string;
 }> = {
-  'Real Food':            { emoji: '🌾', bg: 'bg-green-50',   text: 'text-green-800',  border: 'border-green-200', dot: 'bg-green-500' },
-  'Freeze-Dried Fruits':  { emoji: '🍒', bg: 'bg-purple-50',  text: 'text-purple-800', border: 'border-purple-200', dot: 'bg-purple-500' },
-  'Protein':              { emoji: '💪', bg: 'bg-blue-50',    text: 'text-blue-800',   border: 'border-blue-200',  dot: 'bg-blue-500' },
-  'Bioactive Extracts':   { emoji: '🧬', bg: 'bg-amber-50',   text: 'text-amber-800',  border: 'border-amber-200', dot: 'bg-amber-500' },
-  'Sports Performance':   { emoji: '⚡', bg: 'bg-red-50',     text: 'text-red-800',    border: 'border-red-200',   dot: 'bg-red-500' },
-  'Spices & Seasoning':   { emoji: '🌶️', bg: 'bg-orange-50',  text: 'text-orange-800', border: 'border-orange-200', dot: 'bg-orange-500' },
+  'Real Food':                  { emoji: '🌾', bg: 'bg-green-50',   text: 'text-green-800',  border: 'border-green-200',  dot: 'bg-green-500' },
+  'Freeze-Dried Fruits':        { emoji: '🍒', bg: 'bg-purple-50',  text: 'text-purple-800', border: 'border-purple-200', dot: 'bg-purple-500' },
+  'Protein':                    { emoji: '💪', bg: 'bg-blue-50',    text: 'text-blue-800',   border: 'border-blue-200',   dot: 'bg-blue-500' },
+  'Bioactive Extracts':         { emoji: '🧬', bg: 'bg-amber-50',   text: 'text-amber-800',  border: 'border-amber-200',  dot: 'bg-amber-500' },
+  'Sports Performance':         { emoji: '⚡', bg: 'bg-red-50',     text: 'text-red-800',    border: 'border-red-200',    dot: 'bg-red-500' },
+  'Spices & Seasoning':         { emoji: '🌶️', bg: 'bg-orange-50',  text: 'text-orange-800', border: 'border-orange-200', dot: 'bg-orange-500' },
+  'Minerals & Micronutrients':  { emoji: '💊', bg: 'bg-sky-50',     text: 'text-sky-800',    border: 'border-sky-200',    dot: 'bg-sky-500' },
+  'Probiotics':                 { emoji: '🦠', bg: 'bg-teal-50',    text: 'text-teal-800',   border: 'border-teal-200',   dot: 'bg-teal-500' },
+};
+
+// ─── Regulatory status config ─────────────────────────────────────────────────
+const REG_CONFIG = {
+  food:         { label: '✅ EU Food',    bg: 'bg-emerald-50',  text: 'text-emerald-700', border: 'border-emerald-200' },
+  novel_food:   { label: '🔴 Novel Food', bg: 'bg-red-50',      text: 'text-red-700',     border: 'border-red-200' },
+  check_needed: { label: '⚠️ Check',      bg: 'bg-amber-50',    text: 'text-amber-700',   border: 'border-amber-200' },
 };
 
 function getCategoryStyle(name?: string) {
@@ -26,7 +35,6 @@ function getCategoryStyle(name?: string) {
   };
 }
 
-// ─── Category badge ───────────────────────────────────────────────────────────
 function CategoryBadge({ name }: { name?: string }) {
   const s = getCategoryStyle(name);
   return (
@@ -36,7 +44,16 @@ function CategoryBadge({ name }: { name?: string }) {
   );
 }
 
-// ─── Density bar ──────────────────────────────────────────────────────────────
+function RegulatoryBadge({ status }: { status?: string }) {
+  const cfg = REG_CONFIG[status as keyof typeof REG_CONFIG];
+  if (!cfg) return <span className="text-slate-300 text-xs">—</span>;
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
+      {cfg.label}
+    </span>
+  );
+}
+
 function DensityBar({ value }: { value?: number }) {
   if (!value) return <span className="text-slate-300">—</span>;
   const pct = Math.min((value / 1.2) * 100, 100);
@@ -54,15 +71,6 @@ function DensityBar({ value }: { value?: number }) {
   );
 }
 
-function DensityLabel({ value }: { value?: number }) {
-  if (!value) return null;
-  if (value < 0.35) return <span className="text-xs text-sky-600">very airy</span>;
-  if (value < 0.55) return <span className="text-xs text-emerald-600">light</span>;
-  if (value < 0.80) return <span className="text-xs text-amber-600">medium</span>;
-  return <span className="text-xs text-rose-600">dense</span>;
-}
-
-// ─── Flavor intensity bar ─────────────────────────────────────────────────────
 const FLAVOR_COLORS = ['bg-slate-200', 'bg-emerald-400', 'bg-lime-400', 'bg-amber-400', 'bg-orange-500', 'bg-rose-500'];
 const FLAVOR_LABELS = ['', 'Undetectable', 'Very subtle', 'Mild', 'Noticeable ⚠️', 'Dominant ⚠️'];
 
@@ -72,10 +80,7 @@ function FlavorBar({ intensity, profile }: { intensity?: number; profile?: strin
     <div className="flex flex-col gap-0.5">
       <div className="flex items-center gap-0.5">
         {[1,2,3,4,5].map(i => (
-          <div
-            key={i}
-            className={`w-3 h-3 rounded-sm ${i <= intensity ? FLAVOR_COLORS[intensity] : 'bg-slate-100'}`}
-          />
+          <div key={i} className={`w-3 h-3 rounded-sm ${i <= intensity ? FLAVOR_COLORS[intensity] : 'bg-slate-100'}`} />
         ))}
         <span className="text-xs text-slate-500 ml-1.5">{FLAVOR_LABELS[intensity]}</span>
       </div>
@@ -89,6 +94,7 @@ export default function IngredientsPage() {
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState<string>('All');
+  const [activeReg, setActiveReg] = useState<string>('All');
   const [sortBy, setSortBy] = useState<'name' | 'category' | 'density' | 'flavor'>('category');
   const [search, setSearch] = useState('');
 
@@ -105,15 +111,19 @@ export default function IngredientsPage() {
     }
   }
 
-  // Unique categories in config order
   const categoryOrder = Object.keys(CATEGORY_CONFIG);
-  const categories = ['All', ...categoryOrder.filter(c =>
-    ingredients.some(i => i.category_name === c)
-  )];
+  const categories = ['All', ...categoryOrder.filter(c => ingredients.some(i => i.category_name === c))];
 
-  // Filter + sort
+  // Regulatory counts
+  const regCounts = {
+    food: ingredients.filter(i => i.eu_regulatory_status === 'food').length,
+    novel_food: ingredients.filter(i => i.eu_regulatory_status === 'novel_food').length,
+    check_needed: ingredients.filter(i => i.eu_regulatory_status === 'check_needed').length,
+  };
+
   const filtered = ingredients
     .filter(i => activeCategory === 'All' || i.category_name === activeCategory)
+    .filter(i => activeReg === 'All' || i.eu_regulatory_status === activeReg)
     .filter(i => !search || i.name.toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => {
       if (sortBy === 'density') return (a.bulk_density_g_per_ml ?? 0) - (b.bulk_density_g_per_ml ?? 0);
@@ -126,21 +136,18 @@ export default function IngredientsPage() {
       return a.name.localeCompare(b.name);
     });
 
-  // Stats
   const withDensity = ingredients.filter(i => i.bulk_density_g_per_ml);
   const avgDensity = withDensity.length > 0
     ? withDensity.reduce((s, i) => s + (i.bulk_density_g_per_ml ?? 0), 0) / withDensity.length
     : null;
 
-  // Group by category when viewing All + sorted by category
-  const grouped = sortBy === 'category' && activeCategory === 'All';
+  const grouped = sortBy === 'category' && activeCategory === 'All' && activeReg === 'All';
   const groupedRows: { category: string; items: Ingredient[] }[] = [];
   if (grouped) {
     categoryOrder.forEach(cat => {
       const items = filtered.filter(i => i.category_name === cat);
       if (items.length > 0) groupedRows.push({ category: cat, items });
     });
-    // Uncategorised
     const other = filtered.filter(i => !i.category_name || !categoryOrder.includes(i.category_name));
     if (other.length > 0) groupedRows.push({ category: 'Other', items: other });
   }
@@ -156,10 +163,57 @@ export default function IngredientsPage() {
             {ingredients.length} ingredients across {categories.length - 1} categories
           </p>
         </div>
-        <button className="primary">+ Add Ingredient</button>
       </div>
 
-      {/* STAT CARDS */}
+      {/* REGULATORY STATUS SUMMARY */}
+      {!loading && (
+        <div className="grid grid-cols-3 gap-3">
+          <button
+            onClick={() => setActiveReg(activeReg === 'food' ? 'All' : 'food')}
+            className={`rounded-xl border p-4 text-left transition-all hover:shadow-sm ${
+              activeReg === 'food'
+                ? 'bg-emerald-50 border-emerald-300 shadow-sm'
+                : 'bg-white border-slate-200'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-sm font-semibold text-slate-700">✅ Clean EU Food</span>
+              <span className="text-2xl font-bold text-emerald-600">{regCounts.food}</span>
+            </div>
+            <p className="text-xs text-slate-500">Standard EU food law · No auth needed</p>
+          </button>
+          <button
+            onClick={() => setActiveReg(activeReg === 'novel_food' ? 'All' : 'novel_food')}
+            className={`rounded-xl border p-4 text-left transition-all hover:shadow-sm ${
+              activeReg === 'novel_food'
+                ? 'bg-red-50 border-red-300 shadow-sm'
+                : 'bg-white border-slate-200'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-sm font-semibold text-slate-700">🔴 Novel Food</span>
+              <span className="text-2xl font-bold text-red-600">{regCounts.novel_food}</span>
+            </div>
+            <p className="text-xs text-slate-500">EU 2015/2283 · Auth required · Longevity Pro tier</p>
+          </button>
+          <button
+            onClick={() => setActiveReg(activeReg === 'check_needed' ? 'All' : 'check_needed')}
+            className={`rounded-xl border p-4 text-left transition-all hover:shadow-sm ${
+              activeReg === 'check_needed'
+                ? 'bg-amber-50 border-amber-300 shadow-sm'
+                : 'bg-white border-slate-200'
+            }`}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-sm font-semibold text-slate-700">⚠️ Verify</span>
+              <span className="text-2xl font-bold text-amber-600">{regCounts.check_needed}</span>
+            </div>
+            <p className="text-xs text-slate-500">Strain-specific check needed pre-launch</p>
+          </button>
+        </div>
+      )}
+
+      {/* CATEGORY STAT CARDS */}
       {!loading && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {categoryOrder.filter(c => ingredients.some(i => i.category_name === c)).map(cat => {
@@ -187,7 +241,6 @@ export default function IngredientsPage() {
       {/* CONTROLS */}
       {!loading && (
         <div className="flex flex-wrap gap-3 items-center">
-          {/* Search */}
           <input
             type="text"
             placeholder="Search ingredients…"
@@ -195,8 +248,6 @@ export default function IngredientsPage() {
             onChange={e => setSearch(e.target.value)}
             className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 w-48 focus:outline-none focus:ring-2 focus:ring-slate-300"
           />
-
-          {/* Category tabs */}
           <div className="flex gap-1.5 flex-wrap">
             {categories.map(cat => {
               const s = cat === 'All' ? null : getCategoryStyle(cat);
@@ -216,8 +267,6 @@ export default function IngredientsPage() {
               );
             })}
           </div>
-
-          {/* Sort */}
           <div className="flex gap-1 ml-auto">
             <span className="text-xs text-slate-400 self-center mr-1">Sort:</span>
             {(['category', 'name', 'density', 'flavor'] as const).map(s => (
@@ -249,13 +298,11 @@ export default function IngredientsPage() {
             const s = getCategoryStyle(category);
             return (
               <div key={category} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                {/* Group header */}
                 <div className={`flex items-center gap-2 px-4 py-2.5 border-b ${s.bg} ${s.border}`}>
                   <span className="text-base">{s.emoji}</span>
                   <span className={`font-semibold text-sm ${s.text}`}>{category}</span>
                   <span className={`text-xs font-normal ${s.text} opacity-70`}>— {items.length} ingredient{items.length !== 1 ? 's' : ''}</span>
                 </div>
-                {/* Rows */}
                 <table className="w-full">
                   <tbody>
                     {items.map((ing, idx) => (
@@ -264,7 +311,9 @@ export default function IngredientsPage() {
                           <p className="font-medium text-slate-900 text-sm">{ing.name}</p>
                           {ing.notes && <p className="text-xs text-slate-400 mt-0.5 leading-snug">{ing.notes}</p>}
                         </td>
-                        <td className="px-4 py-3 text-xs text-slate-500 w-10">{ing.unit_of_measure}</td>
+                        <td className="px-4 py-3 w-36">
+                          <RegulatoryBadge status={ing.eu_regulatory_status} />
+                        </td>
                         <td className="px-4 py-3 w-48">
                           <FlavorBar intensity={ing.flavor_intensity} profile={ing.flavor_profile} />
                           {ing.flavor_notes && (
@@ -292,32 +341,32 @@ export default function IngredientsPage() {
       ) : (
         /* FLAT VIEW */
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-          <table>
+          <table className="w-full">
             <thead>
-              <tr>
-                <th>Ingredient</th>
-                <th>Category</th>
-                <th>Flavour Impact</th>
-                <th>Bulk Density</th>
-                <th>Flow</th>
+              <tr className="bg-slate-50 border-b border-slate-200">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Ingredient</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Category</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">EU Status</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Flavour Impact</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Bulk Density</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-slate-100">
               {filtered.map(ing => (
-                <tr key={ing.id}>
-                  <td className="font-medium text-slate-900">
+                <tr key={ing.id} className="hover:bg-slate-50">
+                  <td className="px-4 py-3 font-medium text-slate-900">
                     {ing.name}
                     {ing.notes && <p className="text-xs text-slate-400 font-normal mt-0.5">{ing.notes}</p>}
                   </td>
-                  <td><CategoryBadge name={ing.category_name} /></td>
-                  <td>
+                  <td className="px-4 py-3"><CategoryBadge name={ing.category_name} /></td>
+                  <td className="px-4 py-3"><RegulatoryBadge status={ing.eu_regulatory_status} /></td>
+                  <td className="px-4 py-3">
                     <FlavorBar intensity={ing.flavor_intensity} profile={ing.flavor_profile} />
                     {ing.flavor_notes && (
                       <p className="text-xs text-slate-400 mt-1 max-w-xs leading-snug">{ing.flavor_notes}</p>
                     )}
                   </td>
-                  <td><DensityBar value={ing.bulk_density_g_per_ml} /></td>
-                  <td><DensityLabel value={ing.bulk_density_g_per_ml} /></td>
+                  <td className="px-4 py-3"><DensityBar value={ing.bulk_density_g_per_ml} /></td>
                 </tr>
               ))}
             </tbody>
@@ -344,7 +393,7 @@ export default function IngredientsPage() {
             </div>
           )}
           <p className="w-full text-xs text-slate-400 mt-1">
-            💡 Tell co-packers: <strong>~0.43 g/ml blend average</strong> · <strong>237 ml fill per 101g bag</strong> (250ml standup pouch, 95% fill) · <strong>2,303 ml per 981g bag</strong> (2.5L gusseted pouch)
+            💡 Tell co-packers: <strong>~0.43 g/ml blend average</strong> · <strong>~256ml fill per ~110g bag</strong> (250ml standup pouch) · <strong>2,303 ml per 981g bag</strong> (2.5L gusseted pouch)
           </p>
         </div>
       )}

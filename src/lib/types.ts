@@ -33,6 +33,8 @@ export interface Ingredient {
   eu_sourcing_difficulty?: number; // 1=trivial, 5=very hard
   eu_sourcing_notes?: string;
   known_eu_distributors?: string;
+  // EU Regulatory
+  eu_regulatory_status?: 'food' | 'novel_food' | 'check_needed';
 }
 
 export interface IngredientCategory {

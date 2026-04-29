@@ -189,7 +189,7 @@ export async function getFormulationIngredientsWithDetails(
       *,
       ingredients (
         id, name, category_id, description, unit_of_measure,
-        bulk_density_g_per_ml, notes,
+        bulk_density_g_per_ml, notes, eu_regulatory_status,
         digestibility_score, digestibility_notes,
         shelf_stability_score, shelf_stability_notes, shelf_life_months,
         ingredient_categories (name)
