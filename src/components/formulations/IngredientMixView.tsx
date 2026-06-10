@@ -74,12 +74,12 @@ export function IngredientMixView({
     return (
       <article
         key={item.id}
-        className={`rounded-xl border p-4 flex gap-4 ${
+        className={`rounded-xl border flex overflow-hidden min-h-[9rem] ${
           isNovel ? 'border-red-200 bg-red-50/30' : 'border-slate-200 bg-white'
         }`}
       >
-        <IngredientThumbnail ingredient={item.ingredient} size="lg" />
-        <div className="flex-1 min-w-0">
+        <IngredientThumbnail ingredient={item.ingredient} size="card" />
+        <div className="flex-1 min-w-0 p-4 flex flex-col justify-center">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <p className="font-semibold text-slate-900 leading-tight">
