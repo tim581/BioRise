@@ -9,13 +9,14 @@ import {
 
 type IngredientThumbnailProps = {
   ingredient?: { id?: number; name?: string; image_url?: string | null } | null;
-  size?: 'sm' | 'md';
+  size?: 'sm' | 'md' | 'lg';
   className?: string;
 };
 
-const SIZE_CLASSES = {
-  sm: 'w-8 h-8 rounded-lg text-lg',
-  md: 'w-10 h-10 rounded-xl text-2xl',
+const SIZES = {
+  sm: { box: 'w-10 h-10 rounded-lg text-xl', px: 40 },
+  md: { box: 'w-14 h-14 rounded-xl text-2xl', px: 56 },
+  lg: { box: 'w-16 h-16 rounded-xl text-3xl', px: 64 },
 } as const;
 
 export function IngredientThumbnail({
@@ -26,8 +27,8 @@ export function IngredientThumbnail({
   const [failed, setFailed] = useState(false);
   const thumbnailUrl = getIngredientThumbnailUrl(ingredient);
   const emoji = getIngredientEmojiFallback(ingredient);
-  const sizeClass = SIZE_CLASSES[size];
-  const boxClass = `${sizeClass} flex-shrink-0 flex items-center justify-center border border-slate-200 shadow-sm overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 ${className}`;
+  const { box, px } = SIZES[size];
+  const boxClass = `${box} flex-shrink-0 flex items-center justify-center border border-slate-200 shadow-sm overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 ${className}`;
 
   if (thumbnailUrl && !failed) {
     return (
@@ -35,8 +36,8 @@ export function IngredientThumbnail({
         <Image
           src={thumbnailUrl}
           alt={ingredient?.name ? `${ingredient.name} thumbnail` : 'Ingredient thumbnail'}
-          width={size === 'sm' ? 32 : 40}
-          height={size === 'sm' ? 32 : 40}
+          width={px}
+          height={px}
           className="w-full h-full object-cover"
           onError={() => setFailed(true)}
         />
@@ -45,8 +46,8 @@ export function IngredientThumbnail({
   }
 
   return (
-    <div className={`${boxClass} select-none`} title={ingredient?.name}>
-      {emoji}
+    <div className={`${boxClass} select-none bg-gradient-to-br from-amber-50 to-orange-50`} title={ingredient?.name}>
+      <span className="leading-none">{emoji}</span>
     </div>
   );
 }

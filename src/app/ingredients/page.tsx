@@ -308,9 +308,9 @@ export default function IngredientsPage() {
                   <tbody>
                     {items.map((ing, idx) => (
                       <tr key={ing.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
-                        <td className="px-4 py-3 w-72">
+                        <td className="px-4 py-3 w-80">
                           <div className="flex items-center gap-3">
-                            <IngredientThumbnail ingredient={ing} size="sm" />
+                            <IngredientThumbnail ingredient={ing} size="lg" />
                             <div>
                               <p className="font-medium text-slate-900 text-sm">{ing.name}</p>
                               {ing.notes && <p className="text-xs text-slate-400 mt-0.5 leading-snug">{ing.notes}</p>}
@@ -362,7 +362,7 @@ export default function IngredientsPage() {
                 <tr key={ing.id} className="hover:bg-slate-50">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
-                      <IngredientThumbnail ingredient={ing} size="sm" />
+                      <IngredientThumbnail ingredient={ing} size="lg" />
                       <div>
                         <p className="font-medium text-slate-900">{ing.name}</p>
                         {ing.notes && <p className="text-xs text-slate-400 font-normal mt-0.5">{ing.notes}</p>}
