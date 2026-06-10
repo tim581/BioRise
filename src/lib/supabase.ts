@@ -192,6 +192,7 @@ export async function getFormulationIngredientsWithDetails(
         bulk_density_g_per_ml, notes, eu_regulatory_status,
         digestibility_score, digestibility_notes,
         shelf_stability_score, shelf_stability_notes, shelf_life_months,
+        health_benefit, image_url,
         ingredient_categories (name)
       )
     `)

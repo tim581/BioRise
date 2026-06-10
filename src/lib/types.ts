@@ -35,6 +35,9 @@ export interface Ingredient {
   known_eu_distributors?: string;
   // EU Regulatory
   eu_regulatory_status?: 'food' | 'novel_food' | 'check_needed';
+  // Content
+  health_benefit?: string;
+  image_url?: string;
 }
 
 export interface IngredientCategory {

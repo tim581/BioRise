@@ -521,10 +521,28 @@ export default function FormulationsPage() {
                               <tr key={item.id} className={`hover:bg-slate-50 transition-colors ${isNovelFood ? 'bg-red-50/30' : ''}`}>
                                 <td className="px-4 py-3 text-slate-400 text-xs">{item.order_priority ?? idx + 1}</td>
                                 <td className="px-4 py-3">
-                                  <div className="font-medium text-slate-900">{item.ingredient?.name ?? `#${item.ingredient_id}`}</div>
-                                  {item.ingredient?.category_name && (
-                                    <div className="text-xs text-slate-400">{item.ingredient.category_name}</div>
-                                  )}
+                                  <div className="flex items-center gap-3">
+                                    {item.ingredient?.image_url ? (
+                                      <img
+                                        src={item.ingredient.image_url}
+                                        alt={item.ingredient.name}
+                                        className="w-10 h-10 rounded-lg object-cover flex-shrink-0 border border-slate-200"
+                                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                      />
+                                    ) : (
+                                      <div className="w-10 h-10 rounded-lg bg-slate-100 flex-shrink-0 flex items-center justify-center text-slate-300 text-lg border border-slate-200">
+                                        🌿
+                                      </div>
+                                    )}
+                                    <div>
+                                      <div className="font-medium text-slate-900">{item.ingredient?.name ?? `#${item.ingredient_id}`}</div>
+                                      {item.ingredient?.health_benefit ? (
+                                        <div className="text-xs text-indigo-600 font-medium mt-0.5">{item.ingredient.health_benefit}</div>
+                                      ) : item.ingredient?.category_name ? (
+                                        <div className="text-xs text-slate-400">{item.ingredient.category_name}</div>
+                                      ) : null}
+                                    </div>
+                                  </div>
                                 </td>
                                 <td className="px-4 py-3 text-right font-mono font-semibold text-slate-800">{g}g</td>
                                 <td className="px-4 py-3 text-right text-slate-500 text-xs">{pct.toFixed(1)}%</td>
