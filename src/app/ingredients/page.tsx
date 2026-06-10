@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { getAllIngredients } from '@/lib/supabase';
 import type { Ingredient } from '@/lib/types';
+import { IngredientThumbnail } from '@/components/IngredientThumbnail';
 
 // ─── Category config ──────────────────────────────────────────────────────────
 const CATEGORY_CONFIG: Record<string, {
@@ -307,9 +308,14 @@ export default function IngredientsPage() {
                   <tbody>
                     {items.map((ing, idx) => (
                       <tr key={ing.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
-                        <td className="px-4 py-3 w-56">
-                          <p className="font-medium text-slate-900 text-sm">{ing.name}</p>
-                          {ing.notes && <p className="text-xs text-slate-400 mt-0.5 leading-snug">{ing.notes}</p>}
+                        <td className="px-4 py-3 w-72">
+                          <div className="flex items-center gap-3">
+                            <IngredientThumbnail ingredient={ing} size="sm" />
+                            <div>
+                              <p className="font-medium text-slate-900 text-sm">{ing.name}</p>
+                              {ing.notes && <p className="text-xs text-slate-400 mt-0.5 leading-snug">{ing.notes}</p>}
+                            </div>
+                          </div>
                         </td>
                         <td className="px-4 py-3 w-36">
                           <RegulatoryBadge status={ing.eu_regulatory_status} />
@@ -354,9 +360,14 @@ export default function IngredientsPage() {
             <tbody className="divide-y divide-slate-100">
               {filtered.map(ing => (
                 <tr key={ing.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 font-medium text-slate-900">
-                    {ing.name}
-                    {ing.notes && <p className="text-xs text-slate-400 font-normal mt-0.5">{ing.notes}</p>}
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <IngredientThumbnail ingredient={ing} size="sm" />
+                      <div>
+                        <p className="font-medium text-slate-900">{ing.name}</p>
+                        {ing.notes && <p className="text-xs text-slate-400 font-normal mt-0.5">{ing.notes}</p>}
+                      </div>
+                    </div>
                   </td>
                   <td className="px-4 py-3"><CategoryBadge name={ing.category_name} /></td>
                   <td className="px-4 py-3"><RegulatoryBadge status={ing.eu_regulatory_status} /></td>

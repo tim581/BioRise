@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { getAllFormulations, getFormulationIngredientsWithDetails, FormulationIngredientEnriched } from '@/lib/supabase';
 import * as Types from '@/lib/types';
+import { IngredientThumbnail } from '@/components/IngredientThumbnail';
 
 // ============================================================
 // INGREDIENT MACRO DATABASE (per 100g)
@@ -522,11 +523,7 @@ export default function FormulationsPage() {
                                 <td className="px-4 py-3 text-slate-400 text-xs">{item.order_priority ?? idx + 1}</td>
                                 <td className="px-4 py-3">
                                   <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-50 to-slate-100 flex-shrink-0 flex items-center justify-center text-2xl border border-slate-200 shadow-sm select-none">
-                                      {item.ingredient?.image_url && !item.ingredient.image_url.startsWith('http')
-                                        ? item.ingredient.image_url
-                                        : '🌿'}
-                                    </div>
+                                    <IngredientThumbnail ingredient={item.ingredient} />
                                     <div>
                                       <div className="font-medium text-slate-900">{item.ingredient?.name ?? `#${item.ingredient_id}`}</div>
                                       {item.ingredient?.health_benefit ? (
