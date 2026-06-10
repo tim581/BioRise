@@ -30,6 +30,10 @@ function MixBar({ pct }: { pct: number }) {
   );
 }
 
+function sortByGramsDesc(a: FormulationIngredientEnriched, b: FormulationIngredientEnriched) {
+  return Number(b.quantity_grams) - Number(a.quantity_grams);
+}
+
 export function IngredientMixView({
   items,
   totalWeight,
@@ -45,25 +49,83 @@ export function IngredientMixView({
   const [query, setQuery] = useState('');
 
   const filtered = useMemo(() => {
-    if (!query.trim()) return items;
-    const q = query.toLowerCase();
-    return items.filter(
-      (item) =>
-        item.ingredient?.name?.toLowerCase().includes(q) ||
-        item.ingredient?.category_name?.toLowerCase().includes(q) ||
-        item.ingredient?.health_benefit?.toLowerCase().includes(q)
-    );
+    const base = !query.trim()
+      ? items
+      : items.filter((item) => {
+          const q = query.toLowerCase();
+          return (
+            item.ingredient?.name?.toLowerCase().includes(q) ||
+            item.ingredient?.category_name?.toLowerCase().includes(q) ||
+            item.ingredient?.health_benefit?.toLowerCase().includes(q)
+          );
+        });
+    return [...base].sort(sortByGramsDesc);
   }, [items, query]);
 
-  const grouped = useMemo(() => {
-    const map = new Map<string, FormulationIngredientEnriched[]>();
-    for (const item of filtered) {
-      const cat = item.ingredient?.category_name ?? 'Other';
-      if (!map.has(cat)) map.set(cat, []);
-      map.get(cat)!.push(item);
-    }
-    return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
-  }, [filtered]);
+  const renderCard = (item: FormulationIngredientEnriched, rank: number) => {
+    const g = Number(item.quantity_grams);
+    const pct = totalWeight > 0 ? (g / totalWeight) * 100 : 0;
+    const macros = getMacros(item.ingredient_id);
+    const kcal = macros ? (macros.kcal / 100) * g : 0;
+    const prot = macros ? (macros.protein / 100) * g : 0;
+    const cost = getCost(item.ingredient_id, g);
+    const isNovel = item.ingredient?.eu_regulatory_status === 'novel_food';
+
+    return (
+      <article
+        key={item.id}
+        className={`rounded-xl border p-4 flex gap-4 ${
+          isNovel ? 'border-red-200 bg-red-50/30' : 'border-slate-200 bg-white'
+        }`}
+      >
+        <IngredientThumbnail ingredient={item.ingredient} size="lg" />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="font-semibold text-slate-900 leading-tight">
+                {item.ingredient?.name ?? `#${item.ingredient_id}`}
+              </p>
+              {item.ingredient?.category_name && (
+                <p className="text-[10px] uppercase tracking-wide text-slate-400 mt-0.5">
+                  {item.ingredient.category_name}
+                </p>
+              )}
+              {item.ingredient?.health_benefit && (
+                <p className="text-xs text-indigo-600 mt-1 line-clamp-2">
+                  {item.ingredient.health_benefit}
+                </p>
+              )}
+            </div>
+            <span className="text-xs text-slate-400 font-mono flex-shrink-0">#{rank}</span>
+          </div>
+
+          <div className="mt-3 flex items-center gap-3">
+            <span className="text-lg font-bold text-slate-900 tabular-nums">{g}g</span>
+            <span className="text-sm text-slate-500 tabular-nums">{pct.toFixed(1)}%</span>
+            <div className="flex-1">
+              <MixBar pct={pct} />
+            </div>
+          </div>
+
+          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
+            {kcal > 0 && <span>{kcal.toFixed(0)} kcal</span>}
+            {prot > 0 && <span className="text-blue-600">{prot.toFixed(1)}g protein</span>}
+            {cost > 0 && <span>€{cost.toFixed(3)}</span>}
+            {originFlags[item.ingredient_id] && (
+              <span title={originFlags[item.ingredient_id].label}>
+                {originFlags[item.ingredient_id].flag} {originFlags[item.ingredient_id].label}
+              </span>
+            )}
+          </div>
+
+          <div className="mt-2 flex flex-wrap gap-2 items-center">
+            {regulatoryBadge(item.ingredient?.eu_regulatory_status)}
+            {scoreEmoji(item.ingredient?.digestibility_score)}
+          </div>
+        </div>
+      </article>
+    );
+  };
 
   return (
     <div className="space-y-4">
@@ -106,79 +168,8 @@ export function IngredientMixView({
       </div>
 
       {view === 'cards' ? (
-        <div className="space-y-6">
-          {grouped.map(([category, catItems]) => (
-            <section key={category}>
-              <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-3 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
-                {category}
-                <span className="font-normal normal-case text-slate-400">({catItems.length})</span>
-              </h4>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                {catItems.map((item, idx) => {
-                  const g = Number(item.quantity_grams);
-                  const pct = totalWeight > 0 ? (g / totalWeight) * 100 : 0;
-                  const macros = getMacros(item.ingredient_id);
-                  const kcal = macros ? (macros.kcal / 100) * g : 0;
-                  const prot = macros ? (macros.protein / 100) * g : 0;
-                  const cost = getCost(item.ingredient_id, g);
-                  const isNovel = item.ingredient?.eu_regulatory_status === 'novel_food';
-
-                  return (
-                    <article
-                      key={item.id}
-                      className={`rounded-xl border p-4 flex gap-4 ${
-                        isNovel ? 'border-red-200 bg-red-50/30' : 'border-slate-200 bg-white'
-                      }`}
-                    >
-                      <IngredientThumbnail ingredient={item.ingredient} size="lg" />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="font-semibold text-slate-900 leading-tight">
-                              {item.ingredient?.name ?? `#${item.ingredient_id}`}
-                            </p>
-                            {item.ingredient?.health_benefit && (
-                              <p className="text-xs text-indigo-600 mt-1 line-clamp-2">
-                                {item.ingredient.health_benefit}
-                              </p>
-                            )}
-                          </div>
-                          <span className="text-xs text-slate-400 font-mono flex-shrink-0">
-                            #{item.order_priority ?? idx + 1}
-                          </span>
-                        </div>
-
-                        <div className="mt-3 flex items-center gap-3">
-                          <span className="text-lg font-bold text-slate-900 tabular-nums">{g}g</span>
-                          <span className="text-sm text-slate-500 tabular-nums">{pct.toFixed(1)}%</span>
-                          <div className="flex-1">
-                            <MixBar pct={pct} />
-                          </div>
-                        </div>
-
-                        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
-                          {kcal > 0 && <span>{kcal.toFixed(0)} kcal</span>}
-                          {prot > 0 && <span className="text-blue-600">{prot.toFixed(1)}g protein</span>}
-                          {cost > 0 && <span>€{cost.toFixed(3)}</span>}
-                          {originFlags[item.ingredient_id] && (
-                            <span title={originFlags[item.ingredient_id].label}>
-                              {originFlags[item.ingredient_id].flag} {originFlags[item.ingredient_id].label}
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="mt-2 flex flex-wrap gap-2 items-center">
-                          {regulatoryBadge(item.ingredient?.eu_regulatory_status)}
-                          {scoreEmoji(item.ingredient?.digestibility_score)}
-                        </div>
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-            </section>
-          ))}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          {filtered.map((item, idx) => renderCard(item, idx + 1))}
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
