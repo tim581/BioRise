@@ -1,94 +1,56 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { getAllFormulations, getFormulationIngredientsWithDetails, FormulationIngredientEnriched } from '@/lib/supabase';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  getAllFormulations,
+  getFormulationIngredientsWithDetails,
+  FormulationIngredientEnriched,
+} from '@/lib/supabase';
 import * as Types from '@/lib/types';
-import { IngredientThumbnail } from '@/components/IngredientThumbnail';
+import { FormulationTierBar, FORMULATION_META } from '@/components/formulations/FormulationTierBar';
+import { IngredientMixView } from '@/components/formulations/IngredientMixView';
 
-// ============================================================
-// INGREDIENT MACRO DATABASE (per 100g)
-// Source: USDA / manufacturer specs / EU food DB
-// ============================================================
 const MACROS_PER_100G: Record<number, {
   kcal: number; protein: number; carbs: number; fat: number;
   fiber: number; sugar: number; sodium_mg: number;
 }> = {
-  1:  { kcal: 389, protein: 17.0, carbs: 66.0, fat: 7.0,  fiber: 10.0, sugar: 1.0,  sodium_mg: 2   }, // Rolled Oats / Oat Bran
-  2:  { kcal: 370, protein: 90.0, carbs: 3.0,  fat: 1.0,  fiber: 0.0,  sugar: 2.0,  sodium_mg: 120 }, // Whey Isolate
-  3:  { kcal: 375, protein: 80.0, carbs: 8.0,  fat: 2.0,  fiber: 0.0,  sugar: 4.0,  sodium_mg: 140 }, // Casein
-  32: { kcal: 650, protein: 6.0,  carbs: 14.0, fat: 65.0, fiber: 0.0,  sugar: 7.0,  sodium_mg: 40  }, // Coconut Milk Powder
-  5:  { kcal: 486, protein: 17.0, carbs: 42.0, fat: 31.0, fiber: 34.0, sugar: 0.0,  sodium_mg: 16  }, // Chia Seeds
-  6:  { kcal: 534, protein: 18.0, carbs: 29.0, fat: 42.0, fiber: 27.0, sugar: 1.5,  sodium_mg: 30  }, // Ground Flaxseed
-  7:  { kcal: 579, protein: 21.0, carbs: 22.0, fat: 50.0, fiber: 12.0, sugar: 4.4,  sodium_mg: 1   }, // Almonds
-  8:  { kcal: 654, protein: 15.0, carbs: 14.0, fat: 65.0, fiber: 6.7,  sugar: 2.6,  sodium_mg: 2   }, // Walnuts
-  17: { kcal: 350, protein: 3.0,  carbs: 85.0, fat: 1.0,  fiber: 9.0,  sugar: 57.0, sodium_mg: 5   }, // Blueberry FD
-  18: { kcal: 340, protein: 3.0,  carbs: 82.0, fat: 1.0,  fiber: 4.0,  sugar: 64.0, sodium_mg: 5   }, // Sour Cherry FD
-  29: { kcal: 325, protein: 12.0, carbs: 74.0, fat: 1.0,  fiber: 14.0, sugar: 50.0, sodium_mg: 106 }, // Beetroot Powder
-  27: { kcal: 400, protein: 30.0, carbs: 50.0, fat: 5.0,  fiber: 15.0, sugar: 10.0, sodium_mg: 40  }, // Broccoli Sprout
-  13: { kcal: 0,   protein: 0.0,  carbs: 0.0,  fat: 0.0,  fiber: 0.0,  sugar: 0.0,  sodium_mg: 0   }, // Stevia
-  14: { kcal: 0,   protein: 0.0,  carbs: 0.0,  fat: 0.0,  fiber: 0.0,  sugar: 0.0,  sodium_mg: 38750 }, // Sea Salt
+  1:  { kcal: 389, protein: 17.0, carbs: 66.0, fat: 7.0,  fiber: 10.0, sugar: 1.0,  sodium_mg: 2   },
+  2:  { kcal: 370, protein: 90.0, carbs: 3.0,  fat: 1.0,  fiber: 0.0,  sugar: 2.0,  sodium_mg: 120 },
+  3:  { kcal: 375, protein: 80.0, carbs: 8.0,  fat: 2.0,  fiber: 0.0,  sugar: 4.0,  sodium_mg: 140 },
+  32: { kcal: 650, protein: 6.0,  carbs: 14.0, fat: 65.0, fiber: 0.0,  sugar: 7.0,  sodium_mg: 40  },
+  5:  { kcal: 486, protein: 17.0, carbs: 42.0, fat: 31.0, fiber: 34.0, sugar: 0.0,  sodium_mg: 16  },
+  6:  { kcal: 534, protein: 18.0, carbs: 29.0, fat: 42.0, fiber: 27.0, sugar: 1.5,  sodium_mg: 30  },
+  7:  { kcal: 579, protein: 21.0, carbs: 22.0, fat: 50.0, fiber: 12.0, sugar: 4.4,  sodium_mg: 1   },
+  8:  { kcal: 654, protein: 15.0, carbs: 14.0, fat: 65.0, fiber: 6.7,  sugar: 2.6,  sodium_mg: 2   },
+  17: { kcal: 350, protein: 3.0,  carbs: 85.0, fat: 1.0,  fiber: 9.0,  sugar: 57.0, sodium_mg: 5   },
+  18: { kcal: 340, protein: 3.0,  carbs: 82.0, fat: 1.0,  fiber: 4.0,  sugar: 64.0, sodium_mg: 5   },
+  29: { kcal: 325, protein: 12.0, carbs: 74.0, fat: 1.0,  fiber: 14.0, sugar: 50.0, sodium_mg: 106 },
+  27: { kcal: 400, protein: 30.0, carbs: 50.0, fat: 5.0,  fiber: 15.0, sugar: 10.0, sodium_mg: 40  },
+  13: { kcal: 0,   protein: 0.0,  carbs: 0.0,  fat: 0.0,  fiber: 0.0,  sugar: 0.0,  sodium_mg: 0   },
+  14: { kcal: 0,   protein: 0.0,  carbs: 0.0,  fat: 0.0,  fiber: 0.0,  sugar: 0.0,  sodium_mg: 38750 },
 };
 
-// ============================================================
-// INGREDIENT PRICE PER KG (wholesale B2B estimates)
-// ============================================================
 const PRICE_PER_KG: Record<number, number> = {
   1: 0.60, 2: 9.00, 3: 7.50, 32: 6.00, 5: 2.50, 6: 1.20,
   7: 6.50, 8: 6.00, 17: 18.00, 18: 22.00,
   29: 10.00, 27: 65.00, 13: 25.00, 14: 0.30,
 };
 
-// ============================================================
-// ORIGIN FLAGS
-// ============================================================
 const ORIGIN_FLAGS: Record<number, { flag: string; label: string }> = {
   1:  { flag: '🇳🇱🇩🇪', label: 'NL / DE / PL' },
   2:  { flag: '🇳🇱🇮🇪', label: 'NL / IE' },
   3:  { flag: '🇳🇱🇫🇷', label: 'NL / FR' },
-  32: { flag: '🌍', label: 'SE Asia (PH/TH)' },
-  5:  { flag: '🌍', label: 'S. America (BO/AR)' },
+  32: { flag: '🌍', label: 'SE Asia' },
+  5:  { flag: '🌍', label: 'S. America' },
   6:  { flag: '🇵🇱🇩🇪', label: 'PL / DE' },
-  7:  { flag: '🇪🇸', label: 'Spain (EU)' },
+  7:  { flag: '🇪🇸', label: 'Spain' },
   8:  { flag: '🇫🇷🇷🇴', label: 'FR / RO' },
   17: { flag: '🇵🇱🇩🇪', label: 'PL / DE / NL' },
   18: { flag: '🇵🇱🇩🇪', label: 'PL / DE / HU' },
   29: { flag: '🇳🇱🇩🇪', label: 'NL / DE / PL' },
   27: { flag: '🇩🇪🇮🇹', label: 'DE / IT' },
-  13: { flag: '🌍', label: 'CN / PY (EU proc.)' },
+  13: { flag: '🌍', label: 'CN / PY' },
   14: { flag: '🇫🇷🇵🇹', label: 'FR / PT / ES' },
-};
-
-// ============================================================
-// FORMULATION METADATA
-// ============================================================
-const FORMULATION_META: Record<number, {
-  tier: 'foundation' | 'advanced' | 'expert';
-  tagline: string;
-  euStatus: 'clean' | 'novel_food';
-  launchReady: boolean;
-  color: { bg: string; border: string; text: string; badge: string };
-}> = {
-  1: {
-    tier: 'foundation',
-    tagline: 'Launch product — 19 real food ingredients. 100% clean EU food. Zero regulatory risk.',
-    euStatus: 'clean',
-    launchReady: true,
-    color: { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-800', badge: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
-  },
-  2: {
-    tier: 'advanced',
-    tagline: 'Advanced formula — Foundation + 9 premium supplements (D3, K2, Zn, Se, Mg, creatine, probiotics). 28 total ingredients.',
-    euStatus: 'clean',
-    launchReady: true,
-    color: { bg: 'bg-indigo-50', border: 'border-indigo-200', text: 'text-indigo-800', badge: 'bg-indigo-100 text-indigo-700 border-indigo-200' },
-  },
-  3: {
-    tier: 'expert',
-    tagline: 'Expert formula — Advanced + 3 novel foods (Magtein, Chaga, Reishi). Premium longevity stack. Novel Food authorisation required.',
-    euStatus: 'novel_food',
-    launchReady: false,
-    color: { bg: 'bg-violet-50', border: 'border-violet-200', text: 'text-violet-800', badge: 'bg-violet-100 text-violet-700 border-violet-200' },
-  },
 };
 
 function computeNutrition(items: FormulationIngredientEnriched[]) {
@@ -97,13 +59,13 @@ function computeNutrition(items: FormulationIngredientEnriched[]) {
     const m = MACROS_PER_100G[item.ingredient_id];
     if (!m) continue;
     const g = item.quantity_grams;
-    kcal     += (m.kcal     / 100) * g;
-    protein  += (m.protein  / 100) * g;
-    carbs    += (m.carbs    / 100) * g;
-    fat      += (m.fat      / 100) * g;
-    fiber    += (m.fiber    / 100) * g;
-    sugar    += (m.sugar    / 100) * g;
-    sodium_mg+= (m.sodium_mg/ 100) * g;
+    kcal += (m.kcal / 100) * g;
+    protein += (m.protein / 100) * g;
+    carbs += (m.carbs / 100) * g;
+    fat += (m.fat / 100) * g;
+    fiber += (m.fiber / 100) * g;
+    sugar += (m.sugar / 100) * g;
+    sodium_mg += (m.sodium_mg / 100) * g;
   }
   return { kcal, protein, carbs, fat, fiber, sugar, sodium_mg };
 }
@@ -118,41 +80,31 @@ function computeCost(items: FormulationIngredientEnriched[]) {
 }
 
 function scoreEmoji(score: number | undefined) {
-  if (!score) return '—';
+  if (!score) return <span className="text-slate-300 text-xs">—</span>;
   const dots = '●'.repeat(score) + '○'.repeat(5 - score);
   const color = score >= 4 ? 'text-emerald-600' : score === 3 ? 'text-amber-500' : 'text-red-500';
   return <span className={`font-mono text-xs ${color}`}>{dots}</span>;
 }
 
-function statusBadge(status: string) {
-  const map: Record<string, string> = {
-    draft: 'bg-slate-100 text-slate-600',
-    testing: 'bg-amber-100 text-amber-700',
-    approved: 'bg-emerald-100 text-emerald-700',
-    archived: 'bg-red-100 text-red-600',
-  };
-  return (
-    <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wide ${map[status] ?? 'bg-slate-100 text-slate-600'}`}>
-      {status}
-    </span>
-  );
-}
-
 function RegulatoryBadge({ status }: { status?: string }) {
   if (!status) return <span className="text-slate-300 text-xs">—</span>;
-  if (status === 'food') return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-      ✅ EU Food
-    </span>
-  );
-  if (status === 'novel_food') return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-200">
-      🔴 Novel Food
-    </span>
-  );
+  if (status === 'food') {
+    return (
+      <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+        EU Food
+      </span>
+    );
+  }
+  if (status === 'novel_food') {
+    return (
+      <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium bg-red-50 text-red-700 border border-red-200">
+        Novel Food
+      </span>
+    );
+  }
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
-      ⚠️ Check
+    <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
+      Check
     </span>
   );
 }
@@ -167,567 +119,323 @@ function MacroBar({ protein, carbs, fat }: { protein: number; carbs: number; fat
   const fPct = (fatKcal / total) * 100;
   return (
     <div>
-      <div className="flex rounded-full overflow-hidden h-3">
-        <div className="bg-blue-500 transition-all" style={{ width: `${pPct}%` }} title={`Protein ${pPct.toFixed(0)}%`} />
-        <div className="bg-amber-400 transition-all" style={{ width: `${cPct}%` }} title={`Carbs ${cPct.toFixed(0)}%`} />
-        <div className="bg-rose-400 transition-all" style={{ width: `${fPct}%` }} title={`Fat ${fPct.toFixed(0)}%`} />
+      <div className="flex rounded-full overflow-hidden h-2.5">
+        <div className="bg-blue-500" style={{ width: `${pPct}%` }} />
+        <div className="bg-amber-400" style={{ width: `${cPct}%` }} />
+        <div className="bg-rose-400" style={{ width: `${fPct}%` }} />
       </div>
       <div className="flex gap-4 mt-2 text-xs text-slate-500">
-        <span><span className="inline-block w-2 h-2 rounded-full bg-blue-500 mr-1" />Protein {pPct.toFixed(0)}%</span>
-        <span><span className="inline-block w-2 h-2 rounded-full bg-amber-400 mr-1" />Carbs {cPct.toFixed(0)}%</span>
-        <span><span className="inline-block w-2 h-2 rounded-full bg-rose-400 mr-1" />Fat {fPct.toFixed(0)}%</span>
+        <span>Protein {pPct.toFixed(0)}%</span>
+        <span>Carbs {cPct.toFixed(0)}%</span>
+        <span>Fat {fPct.toFixed(0)}%</span>
       </div>
     </div>
   );
 }
 
+type TabId = 'ingredients' | 'nutrition' | 'regulatory' | 'specs';
+
 export default function FormulationsPage() {
   const [formulations, setFormulations] = useState<Types.Formulation[]>([]);
-  const [selectedForm, setSelectedForm] = useState<Types.Formulation | null>(null);
-  const [formIngredients, setFormIngredients] = useState<FormulationIngredientEnriched[]>([]);
+  const [ingredientsByForm, setIngredientsByForm] = useState<Record<number, FormulationIngredientEnriched[]>>({});
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'nutrition' | 'ingredients' | 'regulatory' | 'specs'>('nutrition');
+  const [activeTab, setActiveTab] = useState<TabId>('ingredients');
 
   useEffect(() => {
     async function load() {
       setLoading(true);
       const formData = await getAllFormulations();
       setFormulations(formData);
-      if (formData.length > 0) {
-        setSelectedForm(formData[0]);
-        const items = await getFormulationIngredientsWithDetails(formData[0].id);
-        setFormIngredients(items);
-      }
+
+      const entries = await Promise.all(
+        formData.map(async (form) => {
+          const items = await getFormulationIngredientsWithDetails(form.id);
+          return [form.id, items] as const;
+        })
+      );
+      const map: Record<number, FormulationIngredientEnriched[]> = {};
+      for (const [id, items] of entries) map[id] = items;
+      setIngredientsByForm(map);
+
+      const foundation = formData.find((f) => FORMULATION_META[f.id]?.tier === 'foundation');
+      setSelectedId(foundation?.id ?? formData[0]?.id ?? null);
       setLoading(false);
     }
     load();
   }, []);
 
-  const handleSelect = async (form: Types.Formulation) => {
-    setSelectedForm(form);
-    const items = await getFormulationIngredientsWithDetails(form.id);
-    setFormIngredients(items);
-    setActiveTab('nutrition');
-  };
+  const selectedForm = formulations.find((f) => f.id === selectedId) ?? null;
+  const formIngredients = selectedId ? ingredientsByForm[selectedId] ?? [] : [];
+  const meta = selectedId ? FORMULATION_META[selectedId] : null;
 
   const nutrition = computeNutrition(formIngredients);
   const ingredientCost = computeCost(formIngredients);
   const totalWeight = formIngredients.reduce((s, i) => s + Number(i.quantity_grams), 0);
-  const avgDigestibility = formIngredients.length > 0
-    ? formIngredients.reduce((s, i) => s + (i.ingredient?.digestibility_score ?? 0), 0) / formIngredients.length
-    : 0;
-  const minShelfLife = formIngredients.length > 0
-    ? Math.min(...formIngredients.map(i => i.ingredient?.shelf_life_months ?? 999).filter(v => v < 999))
-    : 0;
 
-  const novelFoodIngredients = formIngredients.filter(i => i.ingredient?.eu_regulatory_status === 'novel_food');
-  const checkNeededIngredients = formIngredients.filter(i => i.ingredient?.eu_regulatory_status === 'check_needed');
-  const meta = selectedForm ? FORMULATION_META[selectedForm.id] : null;
+  const tierPreviews = useMemo(
+    () =>
+      formulations.map((form) => {
+        const items = ingredientsByForm[form.id] ?? [];
+        const n = computeNutrition(items);
+        return {
+          form,
+          meta: FORMULATION_META[form.id],
+          ingredientCount: items.length,
+          kcal: n.kcal,
+          protein: n.protein,
+        };
+      }),
+    [formulations, ingredientsByForm]
+  );
 
-  const TABS = [
-    { id: 'nutrition', label: '🧬 Nutrition' },
-    { id: 'ingredients', label: '📋 Ingredients' },
-    { id: 'regulatory', label: `⚖️ Regulatory${novelFoodIngredients.length > 0 ? ` (${novelFoodIngredients.length}🔴)` : ''}` },
-    { id: 'specs', label: '📦 Specs' },
-  ] as const;
+  const novelFoodIngredients = formIngredients.filter((i) => i.ingredient?.eu_regulatory_status === 'novel_food');
+  const checkNeededIngredients = formIngredients.filter((i) => i.ingredient?.eu_regulatory_status === 'check_needed');
+  const avgDigestibility =
+    formIngredients.length > 0
+      ? formIngredients.reduce((s, i) => s + (i.ingredient?.digestibility_score ?? 0), 0) / formIngredients.length
+      : 0;
+  const minShelfLife =
+    formIngredients.length > 0
+      ? Math.min(...formIngredients.map((i) => i.ingredient?.shelf_life_months ?? 999).filter((v) => v < 999))
+      : 0;
+
+  const getMacros = useCallback((id: number) => MACROS_PER_100G[id], []);
+  const getCost = useCallback(
+    (id: number, grams: number) => ((PRICE_PER_KG[id] ?? 0) / 1000) * grams,
+    []
+  );
+
+  const TABS: { id: TabId; label: string; hint?: string }[] = [
+    { id: 'ingredients', label: 'Ingredients', hint: `${formIngredients.length}` },
+    { id: 'nutrition', label: 'Nutrition' },
+    {
+      id: 'regulatory',
+      label: 'Regulatory',
+      hint: novelFoodIngredients.length > 0 ? `${novelFoodIngredients.length} flagged` : undefined,
+    },
+    { id: 'specs', label: 'Packaging & specs' },
+  ];
 
   return (
-    <div className="space-y-6">
-      {/* PAGE HEADER */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Formulations</h1>
-          <p className="text-slate-500 mt-1">Recipe engineering · {formulations.length} formula{formulations.length !== 1 ? 's' : ''}</p>
-        </div>
-      </div>
+    <div className="space-y-6 pb-10">
+      <header>
+        <h1 className="text-3xl font-bold text-slate-900">Formulations</h1>
+        <p className="text-slate-500 mt-1 max-w-2xl">
+          Compare product tiers, inspect the full recipe, and review nutrition, regulatory status, and packaging specs.
+        </p>
+      </header>
 
       {loading ? (
-        <div className="text-center py-16 text-slate-400">Loading formula data...</div>
+        <div className="text-center py-20 text-slate-400">Loading formulas…</div>
       ) : (
-        <div className="grid grid-cols-4 gap-6">
+        <>
+          <FormulationTierBar
+            items={tierPreviews}
+            selectedId={selectedId}
+            onSelect={(form) => setSelectedId(form.id)}
+          />
 
-          {/* LEFT: VERSION LIST */}
-          <div className="col-span-1">
-            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-              <div className="px-4 py-3 border-b border-slate-200 bg-slate-50">
-                <h3 className="font-semibold text-sm text-slate-700 uppercase tracking-wide">Product Tiers</h3>
-              </div>
-              <div className="divide-y divide-slate-100">
-                {formulations.length === 0 ? (
-                  <p className="p-4 text-sm text-slate-400">No formulations yet</p>
-                ) : formulations.map(form => {
-                  const m = FORMULATION_META[form.id];
-                  const isSelected = selectedForm?.id === form.id;
-                  const borderColor = m?.tier === 'foundation' ? 'border-emerald-500' : m?.tier === 'advanced' ? 'border-indigo-500' : 'border-violet-500';
-                  const bgColor = m?.tier === 'foundation' ? 'bg-emerald-50' : m?.tier === 'advanced' ? 'bg-indigo-50' : 'bg-violet-50';
-                  return (
-                    <button
-                      key={form.id}
-                      onClick={() => handleSelect(form)}
-                      className={`w-full text-left px-4 py-4 transition-colors border-l-4 ${
-                        isSelected
-                          ? `${bgColor} ${borderColor}`
-                          : 'hover:bg-slate-50 border-transparent'
-                      }`}
-                    >
-                      <div className="font-semibold text-sm text-slate-900 leading-tight">{form.name}</div>
-                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                        <span className="text-xs text-slate-400">v{form.version ?? 1}</span>
-                        {statusBadge(form.status ?? 'draft')}
-                      </div>
-                      {m && (
-                        <div className="mt-2">
-                          {m.euStatus === 'clean' ? (
-                            <span className={`text-xs font-medium ${m.tier === 'foundation' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-indigo-700 bg-indigo-50 border-indigo-200'} border rounded-full px-2 py-0.5`}>🟢 Clean EU Food</span>
-                          ) : (
-                            <span className="text-xs font-medium text-violet-700 bg-violet-50 border border-violet-200 rounded-full px-2 py-0.5">🔴 Novel Food Req.</span>
-                          )}
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* TIER COMPARISON CARD */}
-            <div className="mt-4 bg-white rounded-xl border border-slate-200 p-4 space-y-3">
-              <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Product Roadmap</h4>
-              <div className="space-y-2 text-xs">
-                <div className="flex items-start gap-2">
-                  <span className="text-emerald-500 mt-0.5">●</span>
-                  <div>
-                    <p className="font-semibold text-slate-800">Foundation</p>
-                    <p className="text-slate-500">Launch now · 19 real foods · 100% EU food · FASFC notify</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-indigo-500 mt-0.5">●</span>
-                  <div>
-                    <p className="font-semibold text-slate-800">Advanced</p>
-                    <p className="text-slate-500">Immediate option · Foundation + 9 supplements · 28 total</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="text-violet-500 mt-0.5">●</span>
-                  <div>
-                    <p className="font-semibold text-slate-800">Expert</p>
-                    <p className="text-slate-500">+12–18 months · Advanced + novel foods · Premium longevity</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* RIGHT: DETAIL PANEL */}
-          <div className="col-span-3 space-y-4">
-            {selectedForm ? (
-              <>
-                {/* FORMULA HEADER */}
-                <div className={`rounded-xl border p-6 ${meta ? meta.color.bg + ' ' + meta.color.border : 'bg-white border-slate-200'}`}>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <div className="flex items-center gap-3 mb-1 flex-wrap">
-                        <h2 className="text-2xl font-bold text-slate-900">{selectedForm.name}</h2>
-                        {statusBadge(selectedForm.status ?? 'draft')}
-                        <span className="text-xs text-slate-400 font-mono">v{selectedForm.version ?? 1}</span>
-                        {meta?.launchReady ? (
-                          <span className="text-xs font-semibold text-emerald-700 bg-emerald-100 border border-emerald-200 rounded-full px-2.5 py-0.5">🚀 Launch Ready</span>
-                        ) : (
-                          <span className="text-xs font-semibold text-violet-700 bg-violet-100 border border-violet-200 rounded-full px-2.5 py-0.5">⏳ Pre-Launch</span>
-                        )}
-                      </div>
-                      <p className="text-slate-600 text-sm">{selectedForm.description}</p>
-                      {meta && (
-                        <p className={`text-xs mt-1.5 font-medium ${meta.color.text}`}>{meta.tagline}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* QUICK STATS */}
-                  <div className="grid grid-cols-5 gap-4 mt-5 pt-5 border-t border-white/50">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-slate-900">{Math.round(nutrition.kcal) || '~405'}</div>
-                      <div className="text-xs text-slate-500 mt-0.5">kcal / serving</div>
-                    </div>
-                    <div className="text-center border-l border-white/50">
-                      <div className="text-2xl font-bold text-blue-600">{nutrition.protein.toFixed(1) !== '0.0' ? nutrition.protein.toFixed(1) : '~30'}g</div>
-                      <div className="text-xs text-slate-500 mt-0.5">Protein</div>
-                    </div>
-                    <div className="text-center border-l border-white/50">
-                      <div className="text-2xl font-bold text-amber-500">{nutrition.carbs.toFixed(1)}g</div>
-                      <div className="text-xs text-slate-500 mt-0.5">Carbs</div>
-                    </div>
-                    <div className="text-center border-l border-white/50">
-                      <div className="text-2xl font-bold text-rose-500">{nutrition.fat.toFixed(1)}g</div>
-                      <div className="text-xs text-slate-500 mt-0.5">Fat</div>
-                    </div>
-                    <div className="text-center border-l border-white/50">
-                      <div className="text-2xl font-bold text-emerald-600">{formIngredients.length}</div>
-                      <div className="text-xs text-slate-500 mt-0.5">Ingredients</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* TABS */}
-                <div className="flex gap-1 border-b border-slate-200">
-                  {TABS.map(tab => (
+          {selectedForm && (
+            <div className="space-y-0">
+              {/* Sticky tab bar */}
+              <div className="sticky top-0 z-10 -mx-2 px-2 pt-2 pb-0 bg-slate-50/95 backdrop-blur border-b border-slate-200">
+                <div className="flex items-center gap-1 overflow-x-auto pb-px">
+                  {TABS.map((tab) => (
                     <button
                       key={tab.id}
+                      type="button"
                       onClick={() => setActiveTab(tab.id)}
-                      className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+                      className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium whitespace-nowrap rounded-t-lg border-b-2 transition-colors ${
                         activeTab === tab.id
-                          ? 'border-indigo-500 text-indigo-700'
-                          : 'border-transparent text-slate-500 hover:text-slate-700'
+                          ? 'border-indigo-600 text-indigo-700 bg-white'
+                          : 'border-transparent text-slate-500 hover:text-slate-800'
                       }`}
                     >
                       {tab.label}
+                      {tab.hint && (
+                        <span
+                          className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
+                            activeTab === tab.id ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500'
+                          }`}
+                        >
+                          {tab.hint}
+                        </span>
+                      )}
                     </button>
                   ))}
                 </div>
+              </div>
 
-                {/* TAB: NUTRITION PANEL */}
+              <div className="bg-white rounded-b-xl rounded-tr-xl border border-slate-200 border-t-0 p-6 min-h-[420px]">
+                {activeTab === 'ingredients' && (
+                  <IngredientMixView
+                    items={formIngredients}
+                    totalWeight={totalWeight}
+                    nutrition={nutrition}
+                    ingredientCost={ingredientCost}
+                    getMacros={getMacros}
+                    getCost={getCost}
+                    originFlags={ORIGIN_FLAGS}
+                    scoreEmoji={scoreEmoji}
+                    regulatoryBadge={(status) => <RegulatoryBadge status={status} />}
+                  />
+                )}
+
                 {activeTab === 'nutrition' && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-white rounded-xl border border-slate-200 p-5">
-                      <h3 className="font-semibold text-slate-800 mb-4">Macronutrients</h3>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <section>
+                      <h3 className="font-semibold text-slate-900 mb-4">Macronutrients</h3>
                       <MacroBar protein={nutrition.protein} carbs={nutrition.carbs} fat={nutrition.fat} />
-                      <div className="mt-5 space-y-3">
+                      <dl className="mt-6 space-y-3">
                         {[
-                          { label: 'Energy', value: `${Math.round(nutrition.kcal)} kcal`, sub: `${(nutrition.kcal * 4.184).toFixed(0)} kJ`, color: 'bg-slate-300' },
-                          { label: 'Protein', value: `${nutrition.protein.toFixed(1)} g`, sub: `${nutrition.kcal > 0 ? ((nutrition.protein * 4 / nutrition.kcal) * 100).toFixed(0) : '~30'}% of kcal`, color: 'bg-blue-500' },
-                          { label: 'Carbohydrates', value: `${nutrition.carbs.toFixed(1)} g`, sub: `of which sugars ${nutrition.sugar.toFixed(1)} g`, color: 'bg-amber-400' },
-                          { label: 'Dietary Fiber', value: `${nutrition.fiber.toFixed(1)} g`, sub: 'prebiotic & soluble', color: 'bg-emerald-500' },
-                          { label: 'Fat', value: `${nutrition.fat.toFixed(1)} g`, sub: 'incl. omega-3 rich nuts + MCTs', color: 'bg-rose-400' },
-                          { label: 'Sodium', value: `${(nutrition.sodium_mg).toFixed(0)} mg`, sub: 'from sea salt', color: 'bg-slate-400' },
-                        ].map(row => (
-                          <div key={row.label} className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <div className={`w-2.5 h-2.5 rounded-full ${row.color}`} />
-                              <span className="text-sm text-slate-700">{row.label}</span>
-                            </div>
-                            <div className="text-right">
-                              <span className="text-sm font-bold text-slate-900">{row.value}</span>
+                          { label: 'Energy', value: `${Math.round(nutrition.kcal)} kcal`, sub: `${(nutrition.kcal * 4.184).toFixed(0)} kJ` },
+                          { label: 'Protein', value: `${nutrition.protein.toFixed(1)} g`, sub: `${nutrition.kcal > 0 ? ((nutrition.protein * 4 / nutrition.kcal) * 100).toFixed(0) : '—'}% of kcal` },
+                          { label: 'Carbohydrates', value: `${nutrition.carbs.toFixed(1)} g`, sub: `sugars ${nutrition.sugar.toFixed(1)} g` },
+                          { label: 'Fiber', value: `${nutrition.fiber.toFixed(1)} g`, sub: 'prebiotic & soluble' },
+                          { label: 'Fat', value: `${nutrition.fat.toFixed(1)} g`, sub: 'nuts + MCTs' },
+                          { label: 'Sodium', value: `${nutrition.sodium_mg.toFixed(0)} mg`, sub: 'from sea salt' },
+                        ].map((row) => (
+                          <div key={row.label} className="flex justify-between items-baseline gap-4 py-2 border-b border-slate-50">
+                            <dt className="text-sm text-slate-600">{row.label}</dt>
+                            <dd className="text-right">
+                              <span className="font-semibold text-slate-900">{row.value}</span>
                               <span className="text-xs text-slate-400 ml-2">{row.sub}</span>
-                            </div>
+                            </dd>
                           </div>
                         ))}
-                      </div>
-                    </div>
+                      </dl>
+                    </section>
 
-                    <div className="space-y-4">
-                      <div className="bg-white rounded-xl border border-slate-200 p-5">
-                        <h3 className="font-semibold text-slate-800 mb-4">Formula Quality</h3>
-                        <div className="space-y-3">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-slate-600">Avg. Digestibility</span>
-                            <div className="flex items-center gap-2">
-                              {scoreEmoji(Math.round(avgDigestibility))}
-                              <span className="text-sm font-bold text-slate-800">{avgDigestibility.toFixed(1)}/5</span>
-                            </div>
+                    <div className="space-y-6">
+                      <section className="rounded-xl border border-slate-200 p-5">
+                        <h3 className="font-semibold text-slate-900 mb-4">Formula quality</h3>
+                        <dl className="space-y-3 text-sm">
+                          <div className="flex justify-between">
+                            <dt className="text-slate-600">Avg. digestibility</dt>
+                            <dd className="flex items-center gap-2">{scoreEmoji(Math.round(avgDigestibility))}<span className="font-semibold">{avgDigestibility.toFixed(1)}/5</span></dd>
                           </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-slate-600">Limiting Shelf Life</span>
-                            <span className="text-sm font-bold text-slate-800">{minShelfLife > 0 ? `${minShelfLife} months` : '12 months'}</span>
+                          <div className="flex justify-between">
+                            <dt className="text-slate-600">Limiting shelf life</dt>
+                            <dd className="font-semibold">{minShelfLife > 0 ? `${minShelfLife} mo` : '12 mo'}</dd>
                           </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-slate-600">Novel Food ingredients</span>
-                            {novelFoodIngredients.length === 0 ? (
-                              <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">✅ None</span>
-                            ) : (
-                              <span className="text-xs font-semibold text-red-700 bg-red-50 px-2 py-0.5 rounded-full">🔴 {novelFoodIngredients.length} flagged</span>
-                            )}
+                          <div className="flex justify-between">
+                            <dt className="text-slate-600">Novel food items</dt>
+                            <dd>{novelFoodIngredients.length === 0 ? <span className="text-emerald-700 font-medium">None</span> : <span className="text-red-700 font-medium">{novelFoodIngredients.length} flagged</span>}</dd>
                           </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-slate-600">Preservatives?</span>
-                            <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py.5 rounded-full">✅ None required</span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-slate-600">Packaging</span>
-                            <span className="text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">N₂ flush + O₂ absorber</span>
-                          </div>
-                        </div>
-                      </div>
+                        </dl>
+                      </section>
 
-                      <div className="bg-white rounded-xl border border-slate-200 p-5">
-                        <h3 className="font-semibold text-slate-800 mb-4">Cost Estimate / Serving</h3>
-                        <div className="space-y-2">
-                          <div className="flex justify-between">
-                            <span className="text-sm text-slate-600">Ingredient cost</span>
-                            <span className="text-sm font-bold text-slate-900">€{ingredientCost.toFixed(3)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-slate-600">Packaging (small pouch)</span>
-                            <span className="text-sm font-bold text-slate-900">€0.10</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-slate-600">Display box (÷10)</span>
-                            <span className="text-sm font-bold text-slate-900">€0.15</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-sm text-slate-600">Co-packer toll</span>
-                            <span className="text-sm font-bold text-slate-900">€0.25</span>
-                          </div>
-                          <div className="border-t border-slate-100 pt-2 flex justify-between">
-                            <span className="text-sm font-semibold text-slate-700">Est. COGS</span>
-                            <span className="text-sm font-bold text-slate-900">€{(ingredientCost + 0.50).toFixed(2)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-sm font-semibold text-slate-700">At €5.99/serving</span>
-                            <span className={`text-sm font-bold ${
-                              ((5.99 - (ingredientCost + 0.50)) / 5.99) >= 0.80
-                                ? 'text-emerald-600'
-                                : 'text-amber-600'
-                            }`}>
-                              {(((5.99 - (ingredientCost + 0.50)) / 5.99) * 100).toFixed(1)}% GM
-                            </span>
-                          </div>
-                        </div>
-                      </div>
+                      <section className="rounded-xl border border-slate-200 p-5">
+                        <h3 className="font-semibold text-slate-900 mb-4">Cost per serving</h3>
+                        <dl className="space-y-2 text-sm">
+                          <div className="flex justify-between"><dt className="text-slate-600">Ingredients</dt><dd className="font-semibold">€{ingredientCost.toFixed(3)}</dd></div>
+                          <div className="flex justify-between"><dt className="text-slate-600">Packaging + toll</dt><dd className="font-semibold">€0.50</dd></div>
+                          <div className="flex justify-between border-t border-slate-100 pt-2"><dt className="font-medium text-slate-700">Est. COGS</dt><dd className="font-bold">€{(ingredientCost + 0.5).toFixed(2)}</dd></div>
+                          <div className="flex justify-between"><dt className="font-medium text-slate-700">GM at €5.99</dt><dd className={`font-bold ${((5.99 - (ingredientCost + 0.5)) / 5.99) >= 0.8 ? 'text-emerald-600' : 'text-amber-600'}`}>{(((5.99 - (ingredientCost + 0.5)) / 5.99) * 100).toFixed(1)}%</dd></div>
+                        </dl>
+                      </section>
+
+                      {selectedForm.description && (
+                        <section className="rounded-xl bg-slate-50 border border-slate-200 p-5 text-sm text-slate-600 leading-relaxed">
+                          <h3 className="font-semibold text-slate-900 mb-2">About this formula</h3>
+                          <p>{selectedForm.description}</p>
+                          {meta && <p className={`mt-2 text-xs font-medium ${meta.color.text}`}>{meta.tagline}</p>}
+                        </section>
+                      )}
                     </div>
                   </div>
                 )}
 
-                {/* TAB: INGREDIENT BREAKDOWN */}
-                {activeTab === 'ingredients' && (
-                  <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="bg-slate-50 border-b border-slate-200">
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">#</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Ingredient</th>
-                            <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Grams</th>
-                            <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">% Mix</th>
-                            <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">kcal</th>
-                            <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Protein</th>
-                            <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase">Digest.</th>
-                            <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase">EU Status</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Origin</th>
-                            <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Cost/svg</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {formIngredients.map((item, idx) => {
-                            const m = MACROS_PER_100G[item.ingredient_id];
-                            const g = Number(item.quantity_grams);
-                            const kcal = m ? (m.kcal / 100) * g : 0;
-                            const prot = m ? (m.protein / 100) * g : 0;
-                            const pct = totalWeight > 0 ? (g / totalWeight) * 100 : 0;
-                            const cost = PRICE_PER_KG[item.ingredient_id]
-                              ? (PRICE_PER_KG[item.ingredient_id] / 1000) * g
-                              : 0;
-                            const isNovelFood = item.ingredient?.eu_regulatory_status === 'novel_food';
-                            return (
-                              <tr key={item.id} className={`hover:bg-slate-50 transition-colors ${isNovelFood ? 'bg-red-50/30' : ''}`}>
-                                <td className="px-4 py-3 text-slate-400 text-xs">{item.order_priority ?? idx + 1}</td>
-                                <td className="px-4 py-3">
-                                  <div className="flex items-center gap-3">
-                                    <IngredientThumbnail ingredient={item.ingredient} />
-                                    <div>
-                                      <div className="font-medium text-slate-900">{item.ingredient?.name ?? `#${item.ingredient_id}`}</div>
-                                      {item.ingredient?.health_benefit ? (
-                                        <div className="text-xs text-indigo-600 font-medium mt-0.5">{item.ingredient.health_benefit}</div>
-                                      ) : item.ingredient?.category_name ? (
-                                        <div className="text-xs text-slate-400">{item.ingredient.category_name}</div>
-                                      ) : null}
-                                    </div>
-                                  </div>
-                                </td>
-                                <td className="px-4 py-3 text-right font-mono font-semibold text-slate-800">{g}g</td>
-                                <td className="px-4 py-3 text-right text-slate-500 text-xs">{pct.toFixed(1)}%</td>
-                                <td className="px-4 py-3 text-right text-slate-700">{kcal.toFixed(0)}</td>
-                                <td className="px-4 py-3 text-right text-blue-600">{prot.toFixed(1)}g</td>
-                                <td className="px-4 py-3 text-center">{scoreEmoji(item.ingredient?.digestibility_score)}</td>
-                                <td className="px-4 py-3 text-center">
-                                  <RegulatoryBadge status={item.ingredient?.eu_regulatory_status} />
-                                </td>
-                                <td className="px-4 py-3">
-                                  {ORIGIN_FLAGS[item.ingredient_id] ? (
-                                    <div className="flex flex-col">
-                                      <span className="text-base leading-tight">{ORIGIN_FLAGS[item.ingredient_id].flag}</span>
-                                      <span className="text-xs text-slate-400 leading-tight whitespace-nowrap">{ORIGIN_FLAGS[item.ingredient_id].label}</span>
-                                    </div>
-                                  ) : '—'}
-                                </td>
-                                <td className="px-4 py-3 text-right text-slate-700 font-mono text-xs">
-                                  {cost > 0 ? `€${cost.toFixed(3)}` : '—'}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                          {/* TOTALS ROW */}
-                          <tr className="bg-slate-50 border-t-2 border-slate-200 font-semibold">
-                            <td className="px-4 py-3" colSpan={2}><span className="text-slate-700">TOTAL / SERVING</span></td>
-                            <td className="px-4 py-3 text-right font-mono text-slate-900">{totalWeight.toFixed(1)}g</td>
-                            <td className="px-4 py-3 text-right text-slate-500">100%</td>
-                            <td className="px-4 py-3 text-right text-slate-900">{Math.round(nutrition.kcal)}</td>
-                            <td className="px-4 py-3 text-right text-blue-700">{nutrition.protein.toFixed(1)}g</td>
-                            <td colSpan={3} className="px-4 py-3" />
-                            <td className="px-4 py-3 text-right text-slate-900 font-mono text-xs">€{ingredientCost.toFixed(3)}</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                    <div className="px-4 py-3 bg-amber-50 border-t border-amber-100 text-xs text-amber-800 flex items-start gap-2">
-                      <span className="mt-0.5">⚠️</span>
-                      <span>
-                        <strong>Shelf life governed by weakest ingredient.</strong> Ground Flaxseed (12 mo) and Freeze-Dried Fruits (18 mo) are limiting.
-                        Shelf life claim: <strong>12 months</strong> from manufacture. Nitrogen flush + O₂ absorber required.
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                {/* TAB: REGULATORY */}
                 {activeTab === 'regulatory' && (
-                  <div className="space-y-4">
-                    {/* Summary banner */}
+                  <div className="space-y-5 max-w-4xl">
                     {novelFoodIngredients.length === 0 ? (
-                      <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-5 flex items-start gap-4">
-                        <span className="text-3xl">✅</span>
-                        <div>
-                          <h3 className="font-bold text-emerald-800 text-lg">100% Clean EU Food</h3>
-                          <p className="text-emerald-700 text-sm mt-1">All ingredients in this formula fall under standard EU food law (EU 178/2002 + 1169/2011). No pre-market authorisation required.</p>
-                          <p className="text-emerald-600 text-sm mt-2 font-medium">Action needed: Notify FASFC (Belgium) before first sale. Engage EU food regulatory consultant ~6 months pre-launch.</p>
-                        </div>
+                      <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
+                        <h3 className="font-bold text-emerald-900 text-lg">100% clean EU food</h3>
+                        <p className="text-emerald-800 text-sm mt-2 leading-relaxed">
+                          All ingredients fall under standard EU food law. No pre-market authorisation required.
+                          Notify FASFC (Belgium) before first sale.
+                        </p>
                       </div>
                     ) : (
-                      <div className="bg-red-50 border border-red-200 rounded-xl p-5 flex items-start gap-4">
-                        <span className="text-3xl">🔴</span>
-                        <div>
-                          <h3 className="font-bold text-red-800 text-lg">Novel Food Authorisation Required</h3>
-                          <p className="text-red-700 text-sm mt-1">{novelFoodIngredients.length} ingredient{novelFoodIngredients.length > 1 ? 's' : ''} in this formula require Novel Food authorisation under EU 2015/2283 before this product can be sold in the EU.</p>
-                          <p className="text-red-600 text-sm mt-2 font-medium">Timeline: 12–18 months · Estimated cost: €50–100K+ per ingredient</p>
-                        </div>
+                      <div className="rounded-xl border border-red-200 bg-red-50 p-5">
+                        <h3 className="font-bold text-red-900 text-lg">Novel food authorisation required</h3>
+                        <p className="text-red-800 text-sm mt-2">
+                          {novelFoodIngredients.length} ingredient(s) need EU 2015/2283 approval · 12–18 months · €50–100K+ per item
+                        </p>
                       </div>
                     )}
 
-                    {/* Novel Food ingredients */}
                     {novelFoodIngredients.length > 0 && (
-                      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                        <div className="px-4 py-3 bg-red-50 border-b border-red-100">
-                          <h3 className="font-semibold text-red-800 text-sm">🔴 Novel Food Ingredients ({novelFoodIngredients.length})</h3>
-                        </div>
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="bg-slate-50 border-b border-slate-200">
-                              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Ingredient</th>
-                              <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Dose</th>
-                              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Regulation</th>
-                              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Notes</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-100">
-                            {novelFoodIngredients.map(item => (
-                              <tr key={item.id} className="bg-red-50/30">
-                                <td className="px-4 py-3 font-medium text-slate-900">{item.ingredient?.name}</td>
-                                <td className="px-4 py-3 text-right font-mono text-slate-700">{item.quantity_grams}g</td>
-                                <td className="px-4 py-3 text-xs text-red-700 font-medium">EU 2015/2283</td>
-                                <td className="px-4 py-3 text-xs text-slate-500">{item.ingredient?.notes?.split('—')[0]}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                      <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200 overflow-hidden">
+                        {novelFoodIngredients.map((item) => (
+                          <li key={item.id} className="flex justify-between gap-4 px-4 py-3 bg-red-50/20">
+                            <span className="font-medium text-slate-900">{item.ingredient?.name}</span>
+                            <span className="font-mono text-sm text-slate-600">{item.quantity_grams}g</span>
+                          </li>
+                        ))}
+                      </ul>
                     )}
 
-                    {/* Check needed */}
                     {checkNeededIngredients.length > 0 && (
-                      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                        <div className="px-4 py-3 bg-amber-50 border-b border-amber-100">
-                          <h3 className="font-semibold text-amber-800 text-sm">⚠️ Verification Needed ({checkNeededIngredients.length})</h3>
-                        </div>
-                        <table className="w-full text-sm">
-                          <tbody className="divide-y divide-slate-100">
-                            {checkNeededIngredients.map(item => (
-                              <tr key={item.id} className="bg-amber-50/20">
-                                <td className="px-4 py-3 font-medium text-slate-900">{item.ingredient?.name}</td>
-                                <td className="px-4 py-3 text-right font-mono text-slate-700">{item.quantity_grams}g</td>
-                                <td className="px-4 py-3 text-xs text-amber-700">Verify strain-specific Novel Food status with regulatory consultant pre-launch</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                      <ul className="divide-y divide-slate-100 rounded-xl border border-amber-200 overflow-hidden">
+                        {checkNeededIngredients.map((item) => (
+                          <li key={item.id} className="flex justify-between gap-4 px-4 py-3 bg-amber-50/30">
+                            <span className="font-medium text-slate-900">{item.ingredient?.name}</span>
+                            <span className="text-xs text-amber-800">Verify before launch</span>
+                          </li>
+                        ))}
+                      </ul>
                     )}
-
-                    {/* EU Food law context */}
-                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-3 text-sm">
-                      <h3 className="font-semibold text-slate-800">EU Regulatory Framework</h3>
-                      <div className="grid grid-cols-2 gap-4 text-xs text-slate-600">
-                        <div className="space-y-1.5">
-                          <p><strong className="text-slate-700">Category:</strong> Complete Meal Powder (food product)</p>
-                          <p><strong className="text-slate-700">Governing law:</strong> EU 178/2002 + 1169/2011</p>
-                          <p><strong className="text-slate-700">NOT a supplement:</strong> Directive 2002/46/EC does not apply</p>
-                          <p><strong className="text-slate-700">NOT a meal replacement:</strong> EU 609/2013 does not apply</p>
-                        </div>
-                        <div className="space-y-1.5">
-                          <p><strong className="text-slate-700">Pre-market auth:</strong> NOT required for food products</p>
-                          <p><strong className="text-slate-700">FASFC notification:</strong> Required before first BE sale</p>
-                          <p><strong className="text-slate-700">Label ban:</strong> "Probiotic" — use strain name only</p>
-                          <p><strong className="text-slate-700">Consultant:</strong> Engage ~6 months before launch</p>
-                        </div>
-                      </div>
-                    </div>
                   </div>
                 )}
 
-                {/* TAB: PHYSICAL SPECS */}
                 {activeTab === 'specs' && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
-                      <h3 className="font-semibold text-slate-800">Physical Properties</h3>
-                      {[
-                        { label: 'Total dry weight', value: `${totalWeight.toFixed(1)} g / serving` },
-                        { label: 'Bulk density (blend)', value: `~0.43 g/ml` },
-                        { label: 'Fill volume (small pouch)', value: `~${Math.round(totalWeight / 0.43)} ml` },
-                        { label: 'Recommended pouch', value: '250ml standup pouch' },
-                        { label: 'Fill volume (1kg bag)', value: `~${Math.round(981 / 0.43)} ml` },
-                        { label: 'Recommended bag', value: '2.5L standup pouch with gusset' },
-                        { label: 'Colour (dry)', value: 'Warm beige with purple-blue specks (FD blueberry)' },
-                        { label: 'Texture (dry)', value: 'Fine-coarse mixed powder with chia seeds visible' },
-                      ].map(row => (
-                        <div key={row.label} className="flex justify-between items-start gap-4 border-b border-slate-50 pb-2">
-                          <span className="text-sm text-slate-500">{row.label}</span>
-                          <span className="text-sm font-semibold text-slate-800 text-right">{row.value}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="bg-white rounded-xl border border-slate-200 p-5 space-y-4">
-                      <h3 className="font-semibold text-slate-800">Packaging Formats</h3>
-                      {[
-                        { format: '400 kcal Pouch', weight: `~${totalWeight.toFixed(0)}g`, volume: '250ml', price: '€5.99', packaging: '€0.10', cogs: `~€${(ingredientCost + 0.50).toFixed(2)}`, gm: `${(((5.99 - (ingredientCost + 0.50)) / 5.99) * 100).toFixed(1)}%` },
-                        { format: '1 kg Bag', weight: '~981g', volume: '2.5L', price: '€49.90', packaging: '€1.00', cogs: '~€8.00', gm: '~84%' },
-                      ].map(row => (
-                        <div key={row.format} className="rounded-lg border border-slate-200 p-4">
-                          <div className="font-bold text-slate-900 mb-2">{row.format}</div>
-                          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                            <span className="text-slate-500">Fill weight</span><span className="font-medium text-slate-800">{row.weight}</span>
-                            <span className="text-slate-500">Fill volume</span><span className="font-medium text-slate-800">{row.volume}</span>
-                            <span className="text-slate-500">Price</span><span className="font-bold text-slate-900">{row.price}</span>
-                            <span className="text-slate-500">Packaging cost</span><span className="font-medium text-slate-800">{row.packaging}</span>
-                            <span className="text-slate-500">Est. COGS</span><span className="font-medium text-slate-800">{row.cogs}</span>
-                            <span className="text-slate-500">Gross margin</span>
-                            <span className={`font-bold ${parseFloat(row.gm) >= 80 ? 'text-emerald-600' : 'text-amber-600'}`}>{row.gm}</span>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <section className="rounded-xl border border-slate-200 p-5">
+                      <h3 className="font-semibold text-slate-900 mb-4">Physical properties</h3>
+                      <dl className="space-y-3 text-sm">
+                        {[
+                          { label: 'Dry weight / serving', value: `${totalWeight.toFixed(1)} g` },
+                          { label: 'Bulk density', value: '~0.43 g/ml' },
+                          { label: 'Pouch fill volume', value: `~${Math.round(totalWeight / 0.43)} ml` },
+                          { label: 'Recommended pouch', value: '250 ml stand-up' },
+                          { label: 'Colour (dry)', value: 'Warm beige, purple-blue specks' },
+                          { label: 'Texture', value: 'Fine-coarse powder, visible chia' },
+                        ].map((row) => (
+                          <div key={row.label} className="flex justify-between gap-4 py-1 border-b border-slate-50">
+                            <dt className="text-slate-500">{row.label}</dt>
+                            <dd className="font-medium text-slate-900 text-right">{row.value}</dd>
                           </div>
+                        ))}
+                      </dl>
+                    </section>
+
+                    <section className="space-y-4">
+                      {[
+                        { format: '400 kcal pouch', price: '€5.99', weight: `~${totalWeight.toFixed(0)}g`, gm: `${(((5.99 - (ingredientCost + 0.5)) / 5.99) * 100).toFixed(1)}%` },
+                        { format: '1 kg bag', price: '€49.90', weight: '~981g', gm: '~84%' },
+                      ].map((row) => (
+                        <div key={row.format} className="rounded-xl border border-slate-200 p-5">
+                          <h4 className="font-bold text-slate-900">{row.format}</h4>
+                          <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                            <dt className="text-slate-500">Fill weight</dt><dd>{row.weight}</dd>
+                            <dt className="text-slate-500">Price</dt><dd className="font-bold">{row.price}</dd>
+                            <dt className="text-slate-500">Est. COGS</dt><dd>~€{(ingredientCost + 0.5).toFixed(2)}</dd>
+                            <dt className="text-slate-500">Gross margin</dt><dd className={`font-bold ${parseFloat(row.gm) >= 80 ? 'text-emerald-600' : 'text-amber-600'}`}>{row.gm}</dd>
+                          </dl>
                         </div>
                       ))}
-                      <div className="mt-2 p-3 bg-slate-50 rounded-lg text-xs text-slate-600 space-y-1">
-                        <p>🌿 <strong>No preservatives required</strong> — all-dry formula with low water activity</p>
-                        <p>🔵 <strong>Nitrogen flush</strong> at fill point to prevent oxidation</p>
-                        <p>🟠 <strong>O₂ absorber sachet</strong> inside each pouch recommended</p>
-                        <p>🏷️ <strong>Shelf life claim:</strong> 12 months from manufacture date</p>
-                      </div>
-                    </div>
+                      <p className="text-xs text-slate-500 leading-relaxed rounded-lg bg-slate-50 border border-slate-200 p-4">
+                        No preservatives · N₂ flush at fill · O₂ absorber recommended · 12 month shelf life claim
+                      </p>
+                    </section>
                   </div>
                 )}
-              </>
-            ) : (
-              <div className="text-center py-16 text-slate-400">Select a formulation to view details</div>
-            )}
-          </div>
-        </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

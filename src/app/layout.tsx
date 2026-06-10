@@ -53,7 +53,7 @@ export default function RootLayout({
 
           {/* MAIN CONTENT */}
           <main className="flex-1">
-            <div className="max-w-7xl mx-auto p-8">{children}</div>
+            <div className="max-w-[1400px] mx-auto p-8">{children}</div>
           </main>
         </div>
       </body>
