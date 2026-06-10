@@ -49,16 +49,16 @@ export const INGREDIENT_THUMBNAILS: Record<number, string> = {
   31: commonsThumb('Withania_somnifera.jpg'),
   46: commonsThumb('Ganoderma_lucidum_01.jpg'),
 
-  // Minerals & vitamins — whole foods rich in the nutrient
+  // Minerals & vitamins — distinct source image per nutrient
   36: commonsThumb('Pumpkin_seeds.jpg'),
-  37: commonsThumb('Pumpkin_seeds.jpg'),
+  37: commonsThumb('Spinach.jpg'),
   38: commonsThumb('Apples.jpg'),
   39: commonsThumb('Banana.jpg'),
-  40: commonsThumb('Yogurt.jpg'),
-  41: commonsThumb('Egg_yolk.jpg'),
-  42: commonsThumb('Egg_yolk.jpg'),
-  43: commonsThumb('Brazil_nuts.jpg'),
-  44: commonsThumb('Brazil_nuts.jpg'),
+  40: commonsThumb('Kefir.jpg'),
+  41: commonsThumb('Salmon.jpg'),
+  42: commonsThumb('Natto.jpg'),
+  43: commonsThumb('Oysters.jpg'),
+  44: commonsThumb('Saccharomyces_cerevisiae.jpg'),
 };
 
 /** Emoji fallback when no suitable raw-food photo exists. */
@@ -67,8 +67,8 @@ export const INGREDIENT_EMOJI: Record<number, string> = {
   9: '🫘', 10: '🫚', 11: '🌼', 12: '🐟', 13: '🍃', 14: '🧂', 15: '🟡', 16: '🥚',
   17: '🫐', 18: '🍒', 19: '🍎', 20: '🍄', 21: '🍄', 22: '🥬', 24: '🍵', 25: '🌿',
   26: '🌊', 27: '🥦', 28: '🌳', 29: '🟣', 30: '🍊', 31: '🌿', 32: '🥥', 33: '🌾',
-  34: '🌾', 35: '⚫', 36: '🎃', 37: '🎃', 38: '🍎', 39: '🍌', 40: '🥛', 41: '🥚',
-  42: '🥚', 43: '🌰', 44: '🌰', 46: '🍄',
+  34: '🌾', 35: '⚫', 36: '🎃', 37: '🥬', 38: '🍎', 39: '🍌', 40: '🥛', 41: '🐟',
+  42: '🫘', 43: '🦪', 44: '🧫', 46: '🍄',
 };
 
 function isPhotoUrl(value?: string | null): value is string {
