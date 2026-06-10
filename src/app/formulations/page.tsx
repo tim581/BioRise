@@ -61,7 +61,7 @@ const ORIGIN_FLAGS: Record<number, { flag: string; label: string }> = {
 // FORMULATION METADATA
 // ============================================================
 const FORMULATION_META: Record<number, {
-  tier: 'foundation' | 'pro';
+  tier: 'foundation' | 'advanced' | 'expert';
   tagline: string;
   euStatus: 'clean' | 'novel_food';
   launchReady: boolean;
@@ -69,14 +69,21 @@ const FORMULATION_META: Record<number, {
 }> = {
   1: {
     tier: 'foundation',
-    tagline: 'Launch formula — 100% clean EU food. Zero regulatory risk.',
+    tagline: 'Launch product — 19 real food ingredients. 100% clean EU food. Zero regulatory risk.',
     euStatus: 'clean',
     launchReady: true,
     color: { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-800', badge: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
   },
   2: {
-    tier: 'pro',
-    tagline: 'Premium tier — Novel Food authorisation required before EU sale.',
+    tier: 'advanced',
+    tagline: 'Advanced formula — Foundation + 9 premium supplements (D3, K2, Zn, Se, Mg, creatine, probiotics). 28 total ingredients.',
+    euStatus: 'clean',
+    launchReady: true,
+    color: { bg: 'bg-indigo-50', border: 'border-indigo-200', text: 'text-indigo-800', badge: 'bg-indigo-100 text-indigo-700 border-indigo-200' },
+  },
+  3: {
+    tier: 'expert',
+    tagline: 'Expert formula — Advanced + 3 novel foods (Magtein, Chaga, Reishi). Premium longevity stack. Novel Food authorisation required.',
     euStatus: 'novel_food',
     launchReady: false,
     color: { bg: 'bg-violet-50', border: 'border-violet-200', text: 'text-violet-800', badge: 'bg-violet-100 text-violet-700 border-violet-200' },
@@ -250,8 +257,8 @@ export default function FormulationsPage() {
                 ) : formulations.map(form => {
                   const m = FORMULATION_META[form.id];
                   const isSelected = selectedForm?.id === form.id;
-                  const borderColor = m?.tier === 'foundation' ? 'border-emerald-500' : 'border-violet-500';
-                  const bgColor = m?.tier === 'foundation' ? 'bg-emerald-50' : 'bg-violet-50';
+                  const borderColor = m?.tier === 'foundation' ? 'border-emerald-500' : m?.tier === 'advanced' ? 'border-indigo-500' : 'border-violet-500';
+                  const bgColor = m?.tier === 'foundation' ? 'bg-emerald-50' : m?.tier === 'advanced' ? 'bg-indigo-50' : 'bg-violet-50';
                   return (
                     <button
                       key={form.id}
@@ -270,7 +277,7 @@ export default function FormulationsPage() {
                       {m && (
                         <div className="mt-2">
                           {m.euStatus === 'clean' ? (
-                            <span className="text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">🟢 Clean EU Food</span>
+                            <span className={`text-xs font-medium ${m.tier === 'foundation' ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : 'text-indigo-700 bg-indigo-50 border-indigo-200'} border rounded-full px-2 py-0.5`}>🟢 Clean EU Food</span>
                           ) : (
                             <span className="text-xs font-medium text-violet-700 bg-violet-50 border border-violet-200 rounded-full px-2 py-0.5">🔴 Novel Food Req.</span>
                           )}
@@ -290,14 +297,21 @@ export default function FormulationsPage() {
                   <span className="text-emerald-500 mt-0.5">●</span>
                   <div>
                     <p className="font-semibold text-slate-800">Foundation</p>
-                    <p className="text-slate-500">Launch now · 100% EU food · FASFC notify only</p>
+                    <p className="text-slate-500">Launch now · 19 real foods · 100% EU food · FASFC notify</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-indigo-500 mt-0.5">●</span>
+                  <div>
+                    <p className="font-semibold text-slate-800">Advanced</p>
+                    <p className="text-slate-500">Immediate option · Foundation + 9 supplements · 28 total</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2">
                   <span className="text-violet-500 mt-0.5">●</span>
                   <div>
-                    <p className="font-semibold text-slate-800">Longevity Pro</p>
-                    <p className="text-slate-500">+12–18 months · Novel Food auth required · Premium tier</p>
+                    <p className="font-semibold text-slate-800">Expert</p>
+                    <p className="text-slate-500">+12–18 months · Advanced + novel foods · Premium longevity</p>
                   </div>
                 </div>
               </div>

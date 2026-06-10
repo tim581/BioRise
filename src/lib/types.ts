@@ -101,6 +101,7 @@ export interface SupplierBenchmark {
 export interface Formulation {
   id: number;
   name: string;
+  tier?: 'foundation' | 'advanced' | 'expert';  // New: product tier
   description?: string;
   version?: number;
   status?: string;
