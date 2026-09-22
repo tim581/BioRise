@@ -461,7 +461,7 @@ export async function getDashboardSummary(): Promise<Types.DashboardSummary> {
 export async function getAllHealthThemes() {
   const { data, error } = await supabase
     .from('health_themes')
-    .select('id, name, emoji, tagline, is_flagship')
+    .select('id, name, hero_emoji, slogan, tagline, is_flagship')
     .order('id', { ascending: true });
   if (error) { console.error('Error fetching health themes:', error); return []; }
   return data || [];
