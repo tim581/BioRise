@@ -646,6 +646,9 @@ export default function FormulationsPage() {
                             <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">% Mix</th>
                             <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">kcal</th>
                             <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Protein</th>
+                            <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Carbs</th>
+                            <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Fat</th>
+                            <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase">Fiber</th>
                             <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase">Digest.</th>
                             <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase">EU Status</th>
                             <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase">Origin</th>
@@ -658,6 +661,9 @@ export default function FormulationsPage() {
                             const g = Number(item.quantity_grams);
                             const kcal = m ? (m.kcal / 100) * g : 0;
                             const prot = m ? (m.protein / 100) * g : 0;
+                            const carbsG = m ? (m.carbs / 100) * g : 0;
+                            const fatG = m ? (m.fat / 100) * g : 0;
+                            const fiberG = m ? (m.fiber / 100) * g : 0;
                             const pct = totalWeight > 0 ? (g / totalWeight) * 100 : 0;
                             const cost = PRICE_PER_KG[item.ingredient_id]
                               ? (PRICE_PER_KG[item.ingredient_id] / 1000) * g
@@ -687,6 +693,9 @@ export default function FormulationsPage() {
                                 <td className="px-4 py-3 text-right text-slate-500 text-xs">{pct.toFixed(1)}%</td>
                                 <td className="px-4 py-3 text-right text-slate-700">{kcal.toFixed(0)}</td>
                                 <td className="px-4 py-3 text-right text-blue-600">{prot.toFixed(1)}g</td>
+                                <td className="px-4 py-3 text-right text-amber-600">{carbsG.toFixed(1)}g</td>
+                                <td className="px-4 py-3 text-right text-rose-500">{fatG.toFixed(1)}g</td>
+                                <td className="px-4 py-3 text-right text-emerald-600">{fiberG.toFixed(1)}g</td>
                                 <td className="px-4 py-3 text-center">{scoreEmoji(item.ingredient?.digestibility_score)}</td>
                                 <td className="px-4 py-3 text-center">
                                   <RegulatoryBadge status={item.ingredient?.eu_regulatory_status} />
@@ -712,6 +721,9 @@ export default function FormulationsPage() {
                             <td className="px-4 py-3 text-right text-slate-500">100%</td>
                             <td className="px-4 py-3 text-right text-slate-900">{Math.round(nutrition.kcal)}</td>
                             <td className="px-4 py-3 text-right text-blue-700">{nutrition.protein.toFixed(1)}g</td>
+                            <td className="px-4 py-3 text-right text-amber-700">{nutrition.carbs.toFixed(1)}g</td>
+                            <td className="px-4 py-3 text-right text-rose-600">{nutrition.fat.toFixed(1)}g</td>
+                            <td className="px-4 py-3 text-right text-emerald-700">{nutrition.fiber.toFixed(1)}g</td>
                             <td colSpan={3} className="px-4 py-3" />
                             <td className="px-4 py-3 text-right text-slate-900 font-mono text-xs">€{ingredientCost.toFixed(3)}</td>
                           </tr>
