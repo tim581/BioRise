@@ -192,7 +192,7 @@ export async function getFormulationIngredientsWithDetails(
         bulk_density_g_per_ml, notes, eu_regulatory_status,
         digestibility_score, digestibility_notes,
         shelf_stability_score, shelf_stability_notes, shelf_life_months,
-        health_benefit, image_url,
+        health_benefit, image_url, formula_status,
         ingredient_categories (name)
       )
     `)
@@ -451,4 +451,28 @@ export async function getDashboardSummary(): Promise<Types.DashboardSummary> {
       average_cogs_eur: 0,
     };
   }
+}
+
+// ============================================
+// HEALTH THEMES
+// ============================================
+
+// Fetch all health themes
+export async function getAllHealthThemes() {
+  const { data, error } = await supabase
+    .from('health_themes')
+    .select('id, name, emoji, tagline, is_flagship')
+    .order('id', { ascending: true });
+  if (error) { console.error('Error fetching health themes:', error); return []; }
+  return data || [];
+}
+
+// Fetch theme ingredient adjustments for a theme
+export async function getThemeAdjustments(themeId: number) {
+  const { data, error } = await supabase
+    .from('theme_ingredient_adjustments')
+    .select('ingredient_id, action, new_dose_g, rationale')
+    .eq('theme_id', themeId);
+  if (error) { console.error('Error fetching theme adjustments:', error); return []; }
+  return data || [];
 }

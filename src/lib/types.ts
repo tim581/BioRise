@@ -38,6 +38,8 @@ export interface Ingredient {
   // Content
   health_benefit?: string;
   image_url?: string;
+  // Formula review status
+  formula_status?: string; // e.g. 'approved' | 'rejected' | 'candidate'
 }
 
 export interface IngredientCategory {
