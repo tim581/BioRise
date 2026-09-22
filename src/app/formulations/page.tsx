@@ -106,9 +106,9 @@ const FORMULATION_META: Record<number, {
 }> = {
   1: {
     tier: 'foundation',
-    tagline: 'Launch product — 19 real food ingredients. 100% clean EU food. Zero regulatory risk.',
+    tagline: 'Foundation V1 prototype — 11 recognisable ingredients. Cacao · Banana · Cherry. Real food first; plain whey isolate is the deliberate exception.',
     euStatus: 'clean',
-    launchReady: true,
+    launchReady: false,
     color: { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-800', badge: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
   },
   2: {
